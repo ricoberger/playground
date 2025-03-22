@@ -17,6 +17,8 @@ services:
       - ./data/traefik.yaml:/traefik.yaml
       - ./data/acme.json:/acme.json
       - ./data/config.yaml:/config.yaml
+    extra_hosts:
+      - host.docker.internal:host-gateway
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.traefik.entrypoints=http"

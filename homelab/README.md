@@ -17,6 +17,7 @@
     ./dns/dns.sh --domain=<VPN>.homelab.ricoberger.dev --ip=public --operation=create
 
     ./dns/dns.sh --domain=traefik.homelab.ricoberger.dev --ip=private --operation=create
+    ./dns/dns.sh --domain=ollama.homelab.ricoberger.dev --ip=private --operation=create
     ./dns/dns.sh --domain=open-webui.homelab.ricoberger.dev --ip=private --operation=create
     ```
 

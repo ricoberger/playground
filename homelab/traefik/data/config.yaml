@@ -1,7 +1,21 @@
 http:
   routers:
+    ollama:
+      entryPoints:
+        - "https"
+      rule: "Host(`ollama.homelab.ricoberger.dev`)"
+      middlewares:
+        - default-headers
+        - https-redirectscheme
+      tls: {}
+      service: ollama
 
   services:
+    ollama:
+      loadBalancer:
+        servers:
+          - url: "http://host.docker.internal:11434"
+        passHostHeader: true
 
   middlewares:
     https-redirectscheme:
