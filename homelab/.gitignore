@@ -3,3 +3,6 @@ open-webui/data/
 
 # Ignore the acme.json file for Traefik, which contains the create certificates
 traefik/data/acme.json
+
+# Ignore the data directory for the Docker registry
+registry/data/
