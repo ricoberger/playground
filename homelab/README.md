@@ -69,3 +69,9 @@
    docker-compose -f open-webui/docker-compose.yaml up -d --force-recreate
    docker-compose -f registry/docker-compose.yaml up -d --force-recreate
    ```
+
+8. Run a Kubernetes cluster via `kind`:
+
+   ```sh
+   ./kubernetes/kind.sh
+   ```
