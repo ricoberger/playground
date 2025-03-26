@@ -19,6 +19,7 @@
    ./dns/dns.sh --domain=traefik.homelab.ricoberger.dev --ip=private --operation=create
    ./dns/dns.sh --domain=ollama.homelab.ricoberger.dev --ip=private --operation=create
    ./dns/dns.sh --domain=open-webui.homelab.ricoberger.dev --ip=private --operation=create
+   ./dns/dns.sh --domain=registry.homelab.ricoberger.dev --ip=private --operation=create
    ```
 
 3. Create a CronJob to update the DNS record for the VPN:
@@ -66,4 +67,5 @@
    ```sh
    docker-compose -f traefik/docker-compose.yaml up -d --force-recreate
    docker-compose -f open-webui/docker-compose.yaml up -d --force-recreate
+   docker-compose -f registry/docker-compose.yaml up -d --force-recreate
    ```
