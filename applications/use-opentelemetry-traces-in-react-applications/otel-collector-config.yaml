@@ -1,0 +1,28 @@
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+        cors:
+          allowed_origins: ["http://localhost:3000"]
+          allowed_headers: ["*"]
+
+exporters:
+  otlp:
+    endpoint: http://jaeger:4317
+    tls:
+      insecure: true
+  debug:
+    verbosity: detailed
+
+processors:
+  batch:
+    send_batch_size: 1
+    timeout: 10s
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      exporters: [otlp, debug]
+      processors: [batch]
