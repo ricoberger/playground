@@ -1,0 +1,112 @@
+{
+  "rules": [
+    {
+      "from_table": "commerce.customer@replica",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "commerce.customer@rdonly",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "corder@rdonly",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "customer.corder@replica",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "customer.customer@replica",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "customer.customer@rdonly",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "commerce.customer",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "customer@replica",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "commerce.corder",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "customer.corder",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "commerce.corder@replica",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "commerce.corder@rdonly",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "customer.customer",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "corder",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "corder@replica",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    },
+    {
+      "from_table": "customer",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "customer@rdonly",
+      "to_tables": [
+        "commerce.customer"
+      ]
+    },
+    {
+      "from_table": "customer.corder@rdonly",
+      "to_tables": [
+        "commerce.corder"
+      ]
+    }
+  ]
+}

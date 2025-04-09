@@ -1,0 +1,174 @@
+---
+apiVersion: scheduling.k8s.io/v1
+description: Vitess components (vttablet, vtgate, vtctld, etcd)
+globalDefault: false
+kind: PriorityClass
+metadata:
+  name: vitess
+value: 1000
+
+---
+apiVersion: scheduling.k8s.io/v1
+description: The vitess-operator control plane.
+globalDefault: false
+kind: PriorityClass
+metadata:
+  name: vitess-operator-control-plane
+value: 5000
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vitess-operator
+  namespace: vitess
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vitess-operator
+  namespace: vitess
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+      - services
+      - endpoints
+      - persistentvolumeclaims
+      - events
+      - configmaps
+      - secrets
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+    verbs:
+      - get
+  - apiGroups:
+      - apps
+    resources:
+      - deployments
+      - daemonsets
+      - replicasets
+      - statefulsets
+    verbs:
+      - "*"
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+    verbs:
+      - "*"
+  - apiGroups:
+      - apps
+    resourceNames:
+      - vitess-operator
+    resources:
+      - deployments/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - planetscale.com
+    resources:
+      - vitessclusters
+      - vitessclusters/status
+      - vitessclusters/finalizers
+      - vitesscells
+      - vitesscells/status
+      - vitesscells/finalizers
+      - vitesskeyspaces
+      - vitesskeyspaces/status
+      - vitesskeyspaces/finalizers
+      - vitessshards
+      - vitessshards/status
+      - vitessshards/finalizers
+      - etcdlockservers
+      - etcdlockservers/status
+      - etcdlockservers/finalizers
+      - vitessbackups
+      - vitessbackups/status
+      - vitessbackups/finalizers
+      - vitessbackupstorages
+      - vitessbackupstorages/status
+      - vitessbackupstorages/finalizers
+      - vitessbackupschedules
+      - vitessbackupschedules/status
+      - vitessbackupschedules/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - batch
+    resources:
+      - jobs
+    verbs:
+      - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vitess-operator
+  namespace: vitess
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vitess-operator
+subjects:
+  - kind: ServiceAccount
+    name: vitess-operator
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vitess-operator
+  namespace: vitess
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: vitess-operator
+  template:
+    metadata:
+      labels:
+        app: vitess-operator
+    spec:
+      containers:
+        - args:
+            - --logtostderr
+            - -v=4
+          command:
+            - vitess-operator
+          env:
+            - name: WATCH_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: PS_OPERATOR_POD_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PS_OPERATOR_POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: OPERATOR_NAME
+              value: vitess-operator
+          image: planetscale/vitess-operator:v2.14.0
+          name: vitess-operator
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+      priorityClassName: vitess-operator-control-plane
+      serviceAccountName: vitess-operator

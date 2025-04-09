@@ -1,0 +1,62 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: vtgate
+  namespace: vitess
+spec:
+  namespaceSelector:
+    matchNames:
+      - vitess
+  podMetricsEndpoints:
+    - honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: web
+  selector:
+    matchLabels:
+      planetscale.com/cell: zone1
+      planetscale.com/cluster: example
+      planetscale.com/component: vtgate
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: vttablet
+  namespace: vitess
+spec:
+  namespaceSelector:
+    matchNames:
+      - vitess
+  podMetricsEndpoints:
+    - honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: web
+  selector:
+    matchLabels:
+      planetscale.com/cell: zone1
+      planetscale.com/cluster: example
+      planetscale.com/component: vttablet
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: vtctld
+  namespace: vitess
+spec:
+  namespaceSelector:
+    matchNames:
+      - vitess
+  podMetricsEndpoints:
+    - honorLabels: true
+      interval: 15s
+      path: /metrics
+      port: web
+  selector:
+    matchLabels:
+      planetscale.com/cell: zone1
+      planetscale.com/cluster: example
+      planetscale.com/component: vtctld
