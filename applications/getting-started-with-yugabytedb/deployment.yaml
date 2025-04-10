@@ -2,23 +2,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: vitess-client
-  namespace: vitess
+  name: yugabytedb-client
+  namespace: yugabytedb
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: vitess-client
+      app: yugabytedb-client
   template:
     metadata:
       labels:
-        app: vitess-client
+        app: yugabytedb-client
     spec:
       containers:
-        - name: vitess-client
+        - name: yugabytedb-client
           args:
-            - -driver=mysql
-            - -connection-string=user@tcp(example-vtgate-ae7df4b6:3306)/
+            - -driver=postgres
+            - -connection-string=postgres://ysqluser:ysqlpassword@yb-tservers:5433/yugabyte?sslmode=disable
             - -create-orders
             - -goroutines=100
           env:

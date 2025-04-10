@@ -1,0 +1,63 @@
+storage:
+  master:
+    count: 1
+    size: 5Gi
+  tserver:
+    count: 1
+    size: 5Gi
+
+resource:
+  master:
+    requests:
+      cpu: 100m
+      memory: 126Mi
+    limits:
+      cpu: "1000m"
+      memory: 1024Mi
+  tserver:
+    requests:
+      cpu: 100m
+      memory: 126Mi
+    limits:
+      cpu: "1000m"
+      memory: 1024Mi
+
+replicas:
+  master: 3
+  tserver: 3
+  totalMasters: 3
+
+gflags:
+  master:
+    default_memory_limit_to_ram_ratio: 0.85
+  tserver: {}
+
+enableLoadBalancer: false
+
+serviceEndpoints:
+  - name: "yb-master-ui"
+    type: ClusterIP
+    ports:
+      http-ui: "7000"
+
+  - name: "yb-tserver-service"
+    type: ClusterIP
+    ports:
+      tcp-yql-port: "9042"
+      tcp-yedis-port: "6379"
+      tcp-ysql-port: "5433"
+
+  - name: "yugabyted-ui-service"
+    type: ClusterIP
+    ports:
+      yugabyted-ui: "15433"
+
+authCredentials:
+  ysql:
+    user: "ysqluser"
+    password: "ysqlpassword"
+    database: "yugabyte"
+  ycql:
+    user: "ycqluser"
+    password: "ycqlpassword"
+    keyspace: "yugabyte"

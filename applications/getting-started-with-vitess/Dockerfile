@@ -1,14 +1,14 @@
 FROM golang:1.24.1 AS build
-WORKDIR /vitess
+WORKDIR /database-client
 COPY go.mod  ./
 RUN go mod download
 COPY . .
-RUN export CGO_ENABLED=0 && go build -o ./bin/vitess .
+RUN export CGO_ENABLED=0 && go build -o ./bin/database-client .
 
 FROM alpine:3.21.3
 RUN apk update && apk add --no-cache ca-certificates
-RUN mkdir /vitess
-COPY --from=build /vitess/bin/vitess /vitess
-WORKDIR /vitess
+RUN mkdir /database-client
+COPY --from=build /database-client/bin/database-client /database-client
+WORKDIR /database-client
 USER nobody
-ENTRYPOINT  [ "/vitess/vitess" ]
+ENTRYPOINT  [ "/database-client/database-client" ]
