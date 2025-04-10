@@ -5,8 +5,9 @@ Set up for the
 blog post.
 
 ```sh
-docker buildx build --platform=linux/amd64 -f ./Dockerfile -t registry.example.com/vitess:latest .
-docker push registry.example.com/vitess:latest
+docker buildx build --platform=linux/amd64 -f ./Dockerfile -t registry.homelab.ricoberger.dev/vitess-client:latest .
+docker buildx build --platform=linux/arm64 -f ./Dockerfile -t registry.homelab.ricoberger.dev/vitess-client:latest .
+docker push registry.homelab.ricoberger.dev/vitess-client:latest
 
 kubectl apply --server-side -f deployment.yaml
 ```
