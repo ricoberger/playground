@@ -20,6 +20,7 @@
    ./dns/dns.sh --domain=ollama.homelab.ricoberger.dev --ip=private --operation=create
    ./dns/dns.sh --domain=open-webui.homelab.ricoberger.dev --ip=private --operation=create
    ./dns/dns.sh --domain=registry.homelab.ricoberger.dev --ip=private --operation=create
+   ./dns/dns.sh --domain=kubernetes.homelab.ricoberger.dev --ip=private --operation=create
    ```
 
 3. Create a CronJob to update the DNS record for the VPN:

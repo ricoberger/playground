@@ -11,9 +11,10 @@ set -o errexit
 # - https://github.com/kubernetes-sigs/kind/issues/2875
 # - https://github.com/containerd/containerd/blob/main/docs/cri/config.md#registry-configuration
 # - https://github.com/containerd/containerd/blob/main/docs/hosts.md
-cat <<EOF | kind create cluster --name kind --config=-
+cat <<EOF | kind create cluster --config=-
 kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
+name: homelab
 networking:
   apiServerAddress: "0.0.0.0"
   apiServerPort: 6443
@@ -35,6 +36,14 @@ containerdConfigPatches:
   - |-
     [plugins."io.containerd.grpc.v1.cri".registry]
       config_path = "/etc/containerd/certs.d"
+kubeadmConfigPatchesJSON6902:
+  - group: kubeadm.k8s.io
+    version: v1beta3
+    kind: ClusterConfiguration
+    patch: |
+      - op: add
+        path: /apiServer/certSANs/-
+        value: kubernetes.homelab.ricoberger.dev
 EOF
 
 # Add the registry config to the nodes
