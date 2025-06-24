@@ -1,0 +1,180 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app: parca-agent
+  name: parca-agent
+  namespace: parca
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - nodes
+    verbs:
+      - get
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  labels:
+    app: parca-agent
+  name: parca-agent
+  namespace: parca
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: parca-agent
+subjects:
+  - kind: ServiceAccount
+    name: parca-agent
+    namespace: parca
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app: parca-agent
+  name: parca-agent
+  namespace: parca
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: parca-agent
+  name: parca-agent
+  namespace: parca
+data:
+  parca-agent.yaml: |-
+    relabel_configs:
+      - source_labels:
+          - __meta_process_executable_compiler
+        target_label: compiler
+      - source_labels:
+          - __meta_system_kernel_machine
+        target_label: arch
+      - source_labels:
+          - __meta_system_kernel_release
+        target_label: kernel_version
+      - source_labels:
+          - __meta_kubernetes_namespace
+        target_label: namespace
+      - source_labels:
+          - __meta_kubernetes_pod_name
+        target_label: pod
+      - source_labels:
+          - __meta_kubernetes_pod_container_name
+        target_label: container
+      - source_labels:
+          - __meta_kubernetes_pod_container_image
+        target_label: container_image
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  labels:
+    app: parca-agent
+  name: parca-agent
+  namespace: parca
+spec:
+  selector:
+    matchLabels:
+      app: parca-agent
+  template:
+    metadata:
+      labels:
+        app: parca-agent
+    spec:
+      containers:
+        - args:
+            - --log-level=info
+            - --log-format=json
+            - --http-address=:7071
+            - --node=$(NODE_NAME)
+            - --config-path=/etc/parca-agent/parca-agent.yaml
+            - --remote-store-address=parca-server.parca.svc.cluster.local:7070
+            - --remote-store-insecure
+            - --debuginfo-strip
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          image: ghcr.io/parca-dev/parca-agent:v0.39.1
+          name: parca-agent
+          ports:
+            - containerPort: 7071
+              name: http
+          securityContext:
+            privileged: true
+            allowPrivilegeEscalation: true
+            capabilities:
+              add:
+                - SYS_ADMIN
+            readOnlyRootFilesystem: true
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - mountPath: /tmp
+              name: tmp
+            - mountPath: /run
+              name: run
+            - mountPath: /boot
+              name: boot
+              readOnly: true
+            - mountPath: /lib/modules
+              name: modules
+            - mountPath: /sys/kernel/debug
+              name: debugfs
+            - mountPath: /sys/fs/cgroup
+              name: cgroup
+            - mountPath: /sys/fs/bpf
+              name: bpffs
+            - mountPath: /etc/parca-agent
+              name: config
+            - mountPath: /var/run/dbus/system_bus_socket
+              name: dbus-system
+      hostPID: true
+      serviceAccountName: parca-agent
+      tolerations:
+        - operator: Exists
+      volumes:
+        - emptyDir:
+            sizeLimit: 5Gi
+          name: tmp
+        - hostPath:
+            path: /run
+          name: run
+        - hostPath:
+            path: /boot
+          name: boot
+        - hostPath:
+            path: /sys/fs/cgroup
+          name: cgroup
+        - hostPath:
+            path: /lib/modules
+          name: modules
+        - hostPath:
+            path: /sys/fs/bpf
+          name: bpffs
+        - hostPath:
+            path: /sys/kernel/debug
+          name: debugfs
+        - configMap:
+            name: parca-agent
+          name: config
+        - hostPath:
+            path: /var/run/dbus/system_bus_socket
+          name: dbus-system

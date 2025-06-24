@@ -1,0 +1,19 @@
+---
+apiVersion: parca.ricoberger.de/v1alpha1
+kind: ParcaScrapeConfig
+metadata:
+  name: echoserver
+  namespace: parca
+spec:
+  selector:
+    matchLabels:
+      app: echoserver
+  scrapeConfig:
+    port: http
+    interval: 45s
+    timeout: 60s
+    profilingConfig:
+      pprofConfig:
+        fgprof:
+          enabled: true
+          path: /debug/pprof/fgprof

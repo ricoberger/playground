@@ -1,0 +1,116 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: parca-server
+  name: parca-server
+  namespace: parca
+spec:
+  ports:
+    - name: grpc
+      port: 7070
+      targetPort: 7070
+  selector:
+    app: parca-server
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: parca-server
+  name: parca-server
+  namespace: parca
+data:
+  parca.yaml: |-
+    object_storage:
+      bucket:
+        config:
+          directory: /data
+        type: FILESYSTEM
+
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: parca-server
+  name: parca-server
+  namespace: parca
+spec:
+  serviceName: parca-server
+  replicas: 1
+  selector:
+    matchLabels:
+      app: parca-server
+  template:
+    metadata:
+      labels:
+        app: parca-server
+    spec:
+      containers:
+        - args:
+            - /parca
+            - --http-address=:7070
+            - --config-path=/etc/parca/parca.yaml
+            - --log-level=info
+            - --log-format=json
+            - --cors-allowed-origins=*
+            - --debuginfod-upstream-servers=https://debuginfod.systemtap.org
+            - --debuginfod-http-request-timeout=5m
+            - --enable-persistence
+            - --storage-enable-wal
+            - --storage-path=/data
+            - --storage-snapshot-trigger-size=134217728
+            - --storage-index-on-disk
+          image: ghcr.io/parca-dev/parca:v0.23.1
+          name: parca-server
+          ports:
+            - containerPort: 7070
+              name: grpc
+          readinessProbe:
+            exec:
+              command:
+                - /grpc_health_probe
+                - -v
+                - -addr=:7070
+            initialDelaySeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          terminationMessagePolicy: FallbackToLogsOnError
+          volumeMounts:
+            - mountPath: /etc/parca
+              name: config
+            - mountPath: /data
+              name: data
+            - mountPath: /tmp
+              name: tmp
+      securityContext:
+        fsGroup: 65534
+      terminationGracePeriodSeconds: 120
+      volumes:
+        - configMap:
+            name: parca-server
+          name: config
+        - emptyDir:
+            sizeLimit: 1Gi
+          name: tmp
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi

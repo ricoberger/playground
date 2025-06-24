@@ -1,0 +1,19 @@
+volumes:
+  - name: parca
+    configMap:
+      name: parca-server
+
+volumeMounts:
+  - name: parca
+    mountPath: /etc/parca
+
+env:
+  - name: PARCA_CONFIG_SOURCE
+    value: /etc/parca/parca.yaml
+  - name: PARCA_CONFIG_TARGET_NAME
+    value: parca-server-generated
+  - name: PARCA_CONFIG_TARGET_NAMESPACE
+    value: parca
+
+podLabels:
+  app: parca-operator
