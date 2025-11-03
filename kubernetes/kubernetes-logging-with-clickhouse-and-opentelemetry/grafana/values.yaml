@@ -1,0 +1,30 @@
+adminUser: admin
+adminPassword: admin
+
+plugins:
+  - grafana-clickhouse-datasource
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: ClickHouse
+        type: grafana-clickhouse-datasource
+        jsonData:
+          defaultDatabase: otel
+          port: 9000
+          host: clickhouse-clickhouse.otel.svc.cluster.local
+          protocol: native
+          connMaxLifetime: "10"
+          dialTimeout: "10"
+          queryTimeout: "60"
+          maxIdleConns: "5"
+          maxOpenConns: "5"
+          username: otel
+          logs:
+            defaultDatabase: otel
+            defaultTable: otel_logs
+            otelEnabled: true
+            otelVersion: latest
+        secureJsonData:
+          password: OMSZFEjYjqRTTQd0F5hmUMCtT07gj54W

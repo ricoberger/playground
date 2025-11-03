@@ -1,0 +1,281 @@
+---
+# Source: opentelemetry-collector/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector
+rules:
+  - apiGroups: [""]
+    resources: ["pods", "namespaces"]
+    verbs: ["get", "watch", "list"]
+  - apiGroups: ["apps"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["extensions"]
+    resources: ["replicasets"]
+    verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector
+    namespace: otel
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector
+  namespace: otel
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector
+  namespace: otel
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: ${env:MY_POD_IP}:4317
+          http:
+            endpoint: ${env:MY_POD_IP}:4318
+      filelog:
+        include: [ /var/log/pods/*/*/*.log ]
+        start_at: beginning
+        storage: file_storage
+        include_file_path: true
+        include_file_name: false
+        # https://github.com/open-telemetry/opentelemetry-collector-contrib/blob/main/pkg/stanza/docs/operators/README.md#what-operators-are-available
+        operators:
+          - id: container_parser
+            type: container
+          - id: json_parser
+            type: json_parser
+            on_error: send_quiet
+            severity:
+              parse_from: attributes.level
+          - id: trace_parser
+            type: trace_parser
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+            trace_flags:
+              parse_from: attributes.trace_flags
+            on_error: send_quiet
+
+    exporters:
+      clickhouse:
+        endpoint: clickhouse://clickhouse-clickhouse.otel.svc.cluster.local:9000?dial_timeout=10s&compress=lz4
+        database: otel
+        username: '${env:CLICKHOUSE_USERNAME}'
+        password: '${env:CLICKHOUSE_PASSWORD}'
+        create_schema: false
+        async_insert: true
+        logs_table_name: otel_logs
+        traces_table_name: otel_traces
+        metrics_table_name: otel_metrics
+        timeout: 5s
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
+
+    processors:
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+      # https://github.com/open-telemetry/opentelemetry-collector/tree/main/processor/memorylimiterprocessor
+      # https://www.dash0.com/guides/opentelemetry-memory-limiter-processor
+      memory_limiter:
+        check_interval: 5s
+        limit_mib: 400
+        spike_limit_mib: 100
+      k8sattributes:
+          passthrough: false
+          pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.ip
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.uid
+            - sources:
+                - from: connection
+          extract:
+            metadata:
+              - "k8s.namespace.name"
+              - "k8s.deployment.name"
+              - "k8s.statefulset.name"
+              - "k8s.daemonset.name"
+              - "k8s.cronjob.name"
+              - "k8s.job.name"
+              - "k8s.node.name"
+              - "k8s.pod.name"
+              - "k8s.pod.uid"
+              - "k8s.pod.start_time"
+            labels:
+              - tag_name: $$1
+                key_regex: (.*)
+                from: pod
+            annotations:
+              - tag_name: $$1
+                key_regex: (.*)
+                from: pod
+      transform/logs:
+        error_mode: silent
+        log_statements:
+          - context: log
+            conditions:
+              - IsMap(resource.attributes) and resource.attributes["k8s.container.name"] != nil
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"])
+
+    extensions:
+      file_storage:
+        directory: /var/lib/otel-collector
+      health_check:
+        endpoint: ${env:MY_POD_IP}:13133
+      zpages:
+        endpoint: ${env:MY_POD_IP}:55679
+
+    service:
+      extensions:
+        - file_storage
+        - health_check
+        - zpages
+      pipelines:
+        logs:
+          receivers:
+            - otlp
+            - filelog
+          processors:
+            - batch
+            - memory_limiter
+            - k8sattributes
+            - transform/logs
+          exporters:
+            - clickhouse
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  labels:
+    app: opentelemetry
+    component: otel-collector
+spec:
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      protocol: TCP
+      targetPort: 4317
+    - name: otlp-http
+      port: 4318
+      protocol: TCP
+      targetPort: 4318
+    - name: metrics
+      port: 8888
+  selector:
+    app: otel-collector
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  labels:
+    app: opentelemetry
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector
+  template:
+    metadata:
+      labels:
+        app: otel-collector
+    spec:
+      serviceAccountName: otel-collector
+      automountServiceAccountToken: true
+      containers:
+        - name: otel-collector
+          image: registry.homelab.ricoberger.dev/otel-collector:v0.138.0
+          imagePullPolicy: Always
+          args:
+            - --config=/otel-collector/config/config.yaml
+          resources:
+            limits:
+              cpu: 500m
+              memory: 500Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - name: otel-grpc
+              containerPort: 4317
+            - name: otel-http
+              containerPort: 4318
+            - name: metrics
+              containerPort: 8888
+            - name: health
+              containerPort: 13133
+            - name: zpages
+              containerPort: 55679
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+          env:
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  apiVersion: v1
+                  fieldPath: status.podIP
+            - name: GOMEMLIMIT
+              value: 400MiB
+            - name: CLICKHOUSE_USERNAME
+              value: otel
+            - name: CLICKHOUSE_PASSWORD
+              value: OMSZFEjYjqRTTQd0F5hmUMCtT07gj54W
+          volumeMounts:
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: filestorage
+              mountPath: /var/lib/otel-collector
+            - name: config
+              mountPath: /otel-collector/config
+      volumes:
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - hostPath:
+            path: /var/lib/otel-collector
+            type: DirectoryOrCreate
+          name: filestorage
+        - configMap:
+            name: otel-collector
+            items:
+              - key: config.yaml
+                path: config.yaml
+          name: config

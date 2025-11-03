@@ -1,0 +1,46 @@
+---
+apiVersion: clickhouse-keeper.altinity.com/v1
+kind: ClickHouseKeeperInstallation
+metadata:
+  name: clickhouse-keeper
+  namespace: otel
+spec:
+  configuration:
+    clusters:
+      - name: otel
+        layout:
+          replicasCount: 3
+    settings:
+      logger/level: "trace"
+      logger/console: "true"
+      listen_host: "0.0.0.0"
+      keeper_server/four_letter_word_white_list: "*"
+      keeper_server/coordination_settings/raft_logs_level: "information"
+
+  defaults:
+    templates:
+      podTemplate: default
+      dataVolumeClaimTemplate: default
+
+  templates:
+    podTemplates:
+      - name: default
+        metadata:
+          labels:
+            app: clickhouse-keeper
+        spec:
+          containers:
+            - name: clickhouse-keeper
+              imagePullPolicy: IfNotPresent
+              image: "clickhouse/clickhouse-keeper:25.8.11"
+          securityContext:
+            fsGroup: 101
+
+    volumeClaimTemplates:
+      - name: default
+        spec:
+          accessModes:
+            - ReadWriteOnce
+          resources:
+            requests:
+              storage: 5Gi
