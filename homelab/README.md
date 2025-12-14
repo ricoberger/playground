@@ -41,3 +41,13 @@
    ```sh
    ./kubernetes/kind.sh
    ```
+
+5. Get the Kubeconfig for the `kind` cluster:
+
+   ```sh
+   kind export kubeconfig --name homelab --kubeconfig kind-homelab.yaml
+
+   scp ricoberger@ricos-mac-mini.local:/Users/ricoberger/Documents/GitHub/ricoberger/playground/homelab/kind-homelab.yaml kind-homelab-original.yaml
+   yq e '.clusters.[0].cluster.server |= sub("https://0.0.0.0:6443", "https://kubernetes.homelab.ricoberger.dev:6443")' kind-homelab-original.yaml > kind-homelab.yaml
+   rm kind-homelab-original.yaml
+   ```

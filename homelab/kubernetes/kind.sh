@@ -92,3 +92,15 @@ data:
     host: "registry.homelab.ricoberger.dev:${registry_port}"
     help: "https://kind.sigs.k8s.io/docs/user/local-registry/"
 EOF
+
+# Adjust configuration to use our registry via http. The file could be in one of
+# the following locations "/etc/docker/daemon.json" or "~/.docker/daemon.json",
+# then add "registry.homelab.ricoberger.dev" to the list of insecure registries:
+#
+# "insecure-registries":["registry.homelab.ricoberger.dev:5001"]
+
+# Test the registry by running the following commands:
+# - docker pull gcr.io/google-samples/hello-app:1.0
+# - docker tag gcr.io/google-samples/hello-app:1.0 registry.homelab.ricoberger.dev:5001/hello-app:1.0
+# - docker push registry.homelab.ricoberger.dev:5001/hello-app:1.0
+# - kubectl create deployment hello-server --image=registry.homelab.ricoberger.dev:5001/hello-app:1.0
