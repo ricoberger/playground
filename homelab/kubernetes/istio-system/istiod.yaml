@@ -1,0 +1,217 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istiod
+  namespace: istio-system
+spec:
+  releaseName: istiod
+  chart:
+    spec:
+      chart: istiod
+      version: 1.28.1
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+    ignore:
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+          - /webhooks/0/namespaceSelector
+          - /webhooks/1/clientConfig/caBundle
+          - /webhooks/1/namespaceSelector
+          - /webhooks/2/clientConfig/caBundle
+          - /webhooks/2/namespaceSelector
+          - /webhooks/3/clientConfig/caBundle
+          - /webhooks/3/namespaceSelector
+        target:
+          kind: MutatingWebhookConfiguration
+          name: istio-sidecar-injector
+      - paths:
+          - /webhooks/0/clientConfig/caBundle
+          - /webhooks/0/failurePolicy
+          - /webhooks/0/namespaceSelector
+        target:
+          kind: ValidatingWebhookConfiguration
+          name: istio-validator-istio-system
+  interval: 15m
+  timeout: 10m
+  # See https://github.com/istio/istio/blob/1.28.1/manifests/helm-profiles/ambient.yaml
+  values:
+    autoscaleEnabled: false
+    replicaCount: 1
+
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        memory: 128Mi
+
+    cni:
+      cniConfDir: /var/lib/rancher/k3s/agent/etc/cni/net.d
+      cniBinDir: /var/lib/rancher/k3s/data/cni
+      ambient:
+        enabled: true
+
+    pilot:
+      env:
+        PILOT_ENABLE_AMBIENT: "true"
+
+    # meshConfig defines runtime configuration of components, including Istiod
+    # and istio-agent behavior, see
+    # https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all
+    # available options
+    meshConfig:
+      accessLogEncoding: JSON
+      accessLogFile: /dev/stdout
+      enableTracing: true
+      defaultConfig:
+        proxyMetadata:
+          ISTIO_META_ENABLE_HBONE: "true"
+      serviceScopeConfigs:
+        - servicesSelector:
+            matchExpressions:
+              - key: istio.io/global
+                operator: In
+                values: ["true"]
+          scope: GLOBAL
+      extensionProviders:
+        - name: otel-tracing
+          opentelemetry:
+            service: otel-collector-agent.observability.svc.cluster.local
+            port: 4317
+            resource_detectors:
+              environment: {}
+        - name: envoy
+          envoyFileAccessLog:
+            path: /dev/stdout
+            logFormat:
+              labels:
+                level: "info"
+                authority: "%REQ(:AUTHORITY)%"
+                bytes_received: "%BYTES_RECEIVED%"
+                bytes_sent: "%BYTES_SENT%"
+                connection_termination_details: "%CONNECTION_TERMINATION_DETAILS%"
+                downstream_local_address: "%DOWNSTREAM_LOCAL_ADDRESS%"
+                downstream_remote_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+                duration: "%DURATION%"
+                grpc_status: "%GRPC_STATUS(CAMEL_STRING)%"
+                method: "%REQ(:METHOD)%"
+                path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+                protocol: "%PROTOCOL%"
+                request_id: "%REQ(X-REQUEST-ID)%"
+                requested_server_name: "%REQUESTED_SERVER_NAME%"
+                response_code: "%RESPONSE_CODE%"
+                response_code_details: "%RESPONSE_CODE_DETAILS%"
+                response_flags: "%RESPONSE_FLAGS%"
+                route_name: "%ROUTE_NAME%"
+                start_time: "%START_TIME%"
+                traceparent: "%REQ(TRACEPARENT)%"
+                tracestate: "%REQ(TRACESTATE)%"
+                upstream_cluster: "%UPSTREAM_CLUSTER%"
+                upstream_host: "%UPSTREAM_HOST%"
+                upstream_local_address: "%UPSTREAM_LOCAL_ADDRESS%"
+                upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+                upstream_transport_failure_reason: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
+                user_agent: "%REQ(USER-AGENT)%"
+                x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+        # - name: otel-logging
+        #   envoyOtelAls:
+        #     service: otel-collector-agent.observability.svc.cluster.local
+        #     port: 4317
+        #     logFormat:
+        #       labels:
+        #         level: "info"
+        #         authority: "%REQ(:AUTHORITY)%"
+        #         bytes_received: "%BYTES_RECEIVED%"
+        #         bytes_sent: "%BYTES_SENT%"
+        #         connection_termination_details: "%CONNECTION_TERMINATION_DETAILS%"
+        #         downstream_local_address: "%DOWNSTREAM_LOCAL_ADDRESS%"
+        #         downstream_remote_address: "%DOWNSTREAM_REMOTE_ADDRESS%"
+        #         duration: "%DURATION%"
+        #         grpc_status: "%GRPC_STATUS(CAMEL_STRING)%"
+        #         method: "%REQ(:METHOD)%"
+        #         path: "%REQ(X-ENVOY-ORIGINAL-PATH?:PATH)%"
+        #         protocol: "%PROTOCOL%"
+        #         request_id: "%REQ(X-REQUEST-ID)%"
+        #         requested_server_name: "%REQUESTED_SERVER_NAME%"
+        #         response_code: "%RESPONSE_CODE%"
+        #         response_code_details: "%RESPONSE_CODE_DETAILS%"
+        #         response_flags: "%RESPONSE_FLAGS%"
+        #         route_name: "%ROUTE_NAME%"
+        #         start_time: "%START_TIME%"
+        #         upstream_cluster: "%UPSTREAM_CLUSTER%"
+        #         upstream_host: "%UPSTREAM_HOST%"
+        #         upstream_local_address: "%UPSTREAM_LOCAL_ADDRESS%"
+        #         upstream_service_time: "%RESP(X-ENVOY-UPSTREAM-SERVICE-TIME)%"
+        #         upstream_transport_failure_reason: "%UPSTREAM_TRANSPORT_FAILURE_REASON%"
+        #         user_agent: "%REQ(USER-AGENT)%"
+        #         x_forwarded_for: "%REQ(X-FORWARDED-FOR)%"
+
+    global:
+      variant: "distroless"
+
+      # To output all istio components logs in json format by adding
+      # --log_as_json argument to each container argument
+      logAsJson: true
+
+      # Comma-separated minimum per-scope logging level of messages to output,
+      # in the form of <scope>:<level>,<scope>:<level>. The control plane has
+      # different scopes depending on component, but can configure default log
+      # level across all components. If empty, default scope and level will be
+      # used as configured in code.
+      logging:
+        level: "default:info"
+
+      waypoint:
+        # Resources for the waypoint proxy.
+        resources:
+          requests:
+            cpu: 10m
+            memory: 64Mi
+          limits:
+            memory: 64Mi
+
+    pdb:
+      maxUnavailable: 1
+
+---
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: mesh-default
+  namespace: istio-system
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy
+        # - name: otel-logging
+  metrics:
+    - overrides:
+        - match:
+            metric: REQUEST_COUNT
+            mode: CLIENT_AND_SERVER
+          tagOverrides:
+            request_operation:
+              value: filter_state['wasm.istio_operationId']
+        - match:
+            metric: REQUEST_DURATION
+            mode: CLIENT_AND_SERVER
+          tagOverrides:
+            request_operation:
+              value: filter_state['wasm.istio_operationId']
+        - match:
+            metric: REQUEST_SIZE
+            mode: CLIENT_AND_SERVER
+          tagOverrides:
+            request_operation:
+              value: filter_state['wasm.istio_operationId']
+      providers:
+        - name: prometheus
+  tracing:
+    - providers:
+        - name: otel-tracing
+      randomSamplingPercentage: 100

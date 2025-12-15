@@ -1,0 +1,431 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: otel-collector-agent
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - "pods"
+      - "namespaces"
+    verbs:
+      - "get"
+      - "watch"
+      - "list"
+  - apiGroups:
+      - "apps"
+    resources:
+      - "replicasets"
+    verbs:
+      - "get"
+      - "list"
+      - "watch"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: otel-collector-agent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: otel-collector-agent
+subjects:
+  - kind: ServiceAccount
+    name: otel-collector-agent
+    namespace: observability
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            cors:
+              allowed_origins:
+              - http://*
+              - https://*
+            endpoint: 0.0.0.0:4318
+      filelog:
+        include:
+          - /var/log/pods/*/*/*.log
+        start_at: beginning
+        storage: file_storage
+        include_file_path: true
+        include_file_name: false
+        operators:
+          - id: container_parser
+            type: container
+          - id: json_parser
+            type: json_parser
+            on_error: send_quiet
+            severity:
+              parse_from: attributes.level
+          - id: trace_parser
+            type: trace_parser
+            trace_id:
+              parse_from: attributes.trace_id
+            span_id:
+              parse_from: attributes.span_id
+            trace_flags:
+              parse_from: attributes.trace_flags
+            on_error: send_quiet
+      jaeger:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:14250
+          thrift_compact:
+            endpoint: 0.0.0.0:6831
+          thrift_http:
+            endpoint: 0.0.0.0:14268
+      zipkin:
+        endpoint: 0.0.0.0:9411
+
+    exporters:
+      clickhouse:
+        endpoint: clickhouse://clickhouse-clickhouse.observability.svc.cluster.local:9000?dial_timeout=10s&compress=lz4
+        database: observability
+        username: '${env:CLICKHOUSE_USERNAME}'
+        password: '${env:CLICKHOUSE_PASSWORD}'
+        create_schema: false
+        async_insert: true
+        logs_table_name: otel_logs
+        traces_table_name: otel_traces
+        timeout: 5s
+        retry_on_failure:
+          enabled: true
+          initial_interval: 5s
+          max_interval: 30s
+          max_elapsed_time: 300s
+      otlphttp/prometheus:
+        endpoint: http://prometheus:9090/api/v1/otlp
+        tls:
+          insecure: true
+
+    processors:
+      batch:
+        send_batch_size: 10000
+        timeout: 10s
+      memory_limiter:
+        check_interval: 5s
+        limit_percentage: 80
+        spike_limit_percentage: 25
+      k8sattributes:
+          passthrough: false
+          pod_association:
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.ip
+            - sources:
+                - from: resource_attribute
+                  name: k8s.pod.uid
+            - sources:
+                - from: connection
+          extract:
+            metadata:
+              - k8s.namespace.name
+              - k8s.node.name
+              - k8s.pod.name
+              - k8s.pod.uid
+              - k8s.container.name
+            labels:
+              - tag_name: app
+                key_regex: app
+                from: pod
+              - tag_name: k8s-app
+                key_regex: k8s-app
+                from: pod
+              - tag_name: app.kubernetes.io/name
+                key_regex: app.kubernetes.io\/name
+                from: pod
+      resourcedetection:
+        detectors:
+        - env
+        - system
+      transform/logs:
+        error_mode: silent
+        log_statements:
+          - context: log
+            conditions:
+              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.app"] != nil
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app"])
+          - context: log
+            conditions:
+              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.k8s-app"] != nil
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.k8s-app"])
+          - context: log
+            conditions:
+              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.app.kubernetes.io/name"] != nil
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app.kubernetes.io/name"])
+          - context: log
+            conditions:
+              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.container.name"] != nil
+            statements:
+              - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"])
+          # Parse traceparent 00-6ac7dfc54b57c09403006ad060449762-a300e6b481aa1c09-01 from Istio logs
+          - context: log
+            conditions:
+              - IsMap(resource.attributes) and resource.attributes["k8s.container.name"] == "istio-proxy"
+            statements:
+              - set(attributes["trace_id"], Substring(attributes["traceparent"], 3, 32))
+              - set(attributes["span_id"], Substring(attributes["traceparent"], 36, 16))
+              - set(trace_id.string, attributes["trace_id"])
+              - set(span_id.string, attributes["parent_id"])
+      transform/traces:
+        error_mode: ignore
+        trace_statements:
+          - context: span
+            statements:
+              - replace_pattern(name, "\\?.*", "")
+              - replace_match(name, "GET /api/products/*", "GET /api/products/{productId}")
+
+    extensions:
+      file_storage:
+        directory: /var/lib/otel-collector-agent
+      health_check:
+        endpoint: 0.0.0.0:13133
+      zpages:
+        endpoint: 0.0.0.0:55679
+
+    connectors:
+      spanmetrics: {}
+
+    service:
+      telemetry:
+        logs:
+          encoding: json
+        metrics:
+          level: detailed
+          readers:
+            - pull:
+                exporter:
+                  prometheus:
+                    host: 0.0.0.0
+                    port: 8888
+
+      extensions:
+        - file_storage
+        - health_check
+        - zpages
+
+      pipelines:
+        logs:
+          receivers:
+            - otlp
+            - filelog
+          processors:
+            - memory_limiter
+            - batch
+            - k8sattributes
+            - resourcedetection
+            - transform/logs
+          exporters:
+            - clickhouse
+        metrics:
+          receivers:
+            - otlp
+            - spanmetrics
+          processors:
+            - memory_limiter
+            - batch
+            - k8sattributes
+            - resourcedetection
+          exporters:
+            - otlphttp/prometheus
+        traces:
+          receivers:
+            - otlp
+            - jaeger
+            - zipkin
+          processors:
+            - memory_limiter
+            - batch
+            - k8sattributes
+            - resourcedetection
+            - transform/traces
+          exporters:
+            - clickhouse
+            - spanmetrics
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+spec:
+  ports:
+    - name: otlp-grpc
+      port: 4317
+      targetPort: 4317
+      protocol: TCP
+      appProtocol: grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: 4318
+      protocol: TCP
+      appProtocol: http
+    - name: metrics
+      port: 8888
+      targetPort: 8888
+      protocol: TCP
+    - name: jaeger-compact
+      port: 6831
+      targetPort: 6831
+      protocol: UDP
+    - name: jaeger-grpc
+      port: 14250
+      targetPort: 14250
+      protocol: TCP
+    - name: jaeger-thrift
+      port: 14268
+      targetPort: 14268
+      protocol: TCP
+    - name: zipkin
+      port: 9411
+      targetPort: 9411
+      protocol: TCP
+  selector:
+    app: otel-collector-agent
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+  labels:
+    app: otel-collector-agent
+spec:
+  selector:
+    matchLabels:
+      app: otel-collector-agent
+  template:
+    metadata:
+      labels:
+        app: otel-collector-agent
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8888"
+    spec:
+      priorityClassName: system-node-critical
+      serviceAccountName: otel-collector-agent
+      automountServiceAccountToken: true
+      imagePullSecrets:
+        - name: staffbase-registries
+      containers:
+        - name: otel-collector-agent
+          image: registry.homelab.ricoberger.dev:5555/otel-collector-agent:v0.142.0
+          imagePullPolicy: Always
+          args:
+            - --config=/otel-collector/config/config.yaml
+          ports:
+            - name: otel-grpc
+              containerPort: 4317
+              protocol: TCP
+            - name: otel-http
+              containerPort: 4318
+              protocol: TCP
+            - name: metrics
+              containerPort: 8888
+              protocol: TCP
+            - name: health
+              containerPort: 13133
+              protocol: TCP
+            - name: zpages
+              containerPort: 55679
+              protocol: TCP
+            - name: jaeger-compact
+              containerPort: 6831
+              protocol: UDP
+            - name: jaeger-grpc
+              containerPort: 14250
+              protocol: TCP
+            - name: jaeger-thrift
+              containerPort: 14268
+              protocol: TCP
+            - name: zipkin
+              containerPort: 9411
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: health
+          env:
+            # 75% of the configured memory limit
+            - name: GOMEMLIMIT
+              value: 384MiB
+            - name: CLICKHOUSE_USERNAME
+              value: observability
+            - name: CLICKHOUSE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: clickhouse
+                  key: OBSERVABILITY_PASSWORD
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 100m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+            privileged: false
+            seccompProfile:
+              type: RuntimeDefault
+          volumeMounts:
+            - name: varlogpods
+              mountPath: /var/log/pods
+              readOnly: true
+            - name: varlibdockercontainers
+              mountPath: /var/lib/docker/containers
+              readOnly: true
+            - name: filestorage
+              mountPath: /var/lib/otel-collector-agent
+            - name: config
+              mountPath: /otel-collector/config
+      tolerations:
+        - operator: Exists
+      volumes:
+        - name: varlogpods
+          hostPath:
+            path: /var/log/pods
+        - name: varlibdockercontainers
+          hostPath:
+            path: /var/lib/docker/containers
+        - hostPath:
+            path: /var/lib/otel-collector-agent
+            type: DirectoryOrCreate
+          name: filestorage
+        - configMap:
+            name: otel-collector-agent
+            items:
+              - key: config.yaml
+                path: config.yaml
+          name: config

@@ -1,0 +1,13 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: GitRepository
+metadata:
+  name: playground
+  namespace: flux-system
+spec:
+  interval: 15m
+  ref:
+    branch: homelab-setup
+  secretRef:
+    name: deploy-key
+  url: https://github.com/ricoberger/playground

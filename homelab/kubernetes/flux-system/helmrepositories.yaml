@@ -1,0 +1,63 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: clickhouse
+  namespace: flux-system
+spec:
+  interval: 15m
+  url: https://helm.altinity.com
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: external-dns
+  namespace: flux-system
+spec:
+  interval: 15m
+  url: https://kubernetes-sigs.github.io/external-dns
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: grafana
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://ghcr.io/grafana/helm-charts
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: istio
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://gcr.io/istio-release/charts
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: jetstack
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://quay.io/jetstack/charts
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
+  name: ricoberger
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://ghcr.io/ricoberger/charts

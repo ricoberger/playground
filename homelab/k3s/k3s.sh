@@ -32,11 +32,13 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-server 2>/dev/null ||
     -e K3S_KUBECONFIG_MODE=666 \
     -e K3S_NODE_NAME=homelab-k3s-server \
     -v homelab-k3s-server:/var/lib/rancher/k3s \
+    -v $(pwd)/k3s/entrypoint.sh:/entrypoint.sh \
     -v $(pwd)/k3s/registries.yaml:/etc/rancher/k3s/registries.yaml \
     -v .:/output \
     -p 6443:6443 \
-    -p 80:80 \
-    -p 443:443 \
+    -p 80:30080 \
+    -p 443:30443 \
+    --entrypoint /entrypoint.sh \
     --name homelab-k3s-server \
     rancher/k3s:v1.34.2-k3s1 server --tls-san kubernetes.homelab.ricoberger.dev --disable servicelb --disable traefik
 fi
@@ -54,7 +56,9 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-1 2>/dev/null |
     -e K3S_TOKEN=bfz82BRQankBv7bx99H7Maa68wgBUd4f \
     -e K3S_NODE_NAME=homelab-k3s-agent-1 \
     -v homelab-k3s-agent-1:/var/lib/rancher/k3s \
+    -v $(pwd)/k3s/entrypoint.sh:/entrypoint.sh \
     -v $(pwd)/k3s/registries.yaml:/etc/rancher/k3s/registries.yaml \
+    --entrypoint /entrypoint.sh \
     --name homelab-k3s-agent-1 \
     rancher/k3s:v1.34.2-k3s1 agent
 fi
@@ -72,7 +76,9 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-2 2>/dev/null |
     -e K3S_TOKEN=bfz82BRQankBv7bx99H7Maa68wgBUd4f \
     -e K3S_NODE_NAME=homelab-k3s-agent-2 \
     -v homelab-k3s-agent-2:/var/lib/rancher/k3s \
+    -v $(pwd)/k3s/entrypoint.sh:/entrypoint.sh \
     -v $(pwd)/k3s/registries.yaml:/etc/rancher/k3s/registries.yaml \
+    --entrypoint /entrypoint.sh \
     --name homelab-k3s-agent-2 \
     rancher/k3s:v1.34.2-k3s1 agent
 fi

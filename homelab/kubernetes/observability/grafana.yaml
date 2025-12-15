@@ -1,0 +1,249 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: grafana
+rules:
+  - apiGroups:
+      - "*"
+    resources:
+      - "*"
+    verbs:
+      - "*"
+  - nonResourceURLs:
+      - "*"
+    verbs:
+      - "*"
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: grafana
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: grafana
+subjects:
+  - kind: ServiceAccount
+    name: grafana-sa
+    namespace: observability
+
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: grafana-credentials
+  namespace: observability
+data:
+  GF_SECURITY_ADMIN_PASSWORD: ENC[AES256_GCM,data:4xlXpdeaxCbCqDAV09wzqD+FJPmFCTXYS1PCyLEtBDRSkevCcePSkZm1kCk=,iv:6HA3ZVJ+dSR9dh7D/HuLr7fKxHh+j6ry3cICKovcUOI=,tag:gabYYpWPUOPwiwu98lRSzA==,type:str]
+  GF_SECURITY_ADMIN_USER: ENC[AES256_GCM,data:4AfEFspPwCI=,iv:xhpWWdT1tglKyQ1YfPWXZy7RrhdmNBfdDuAIzaH+AUE=,tag:2YV6crvNEzXjy/VB9zugGA==,type:str]
+sops:
+  lastmodified: "2025-12-17T09:48:46Z"
+  mac: ENC[AES256_GCM,data:wk6V7zQCA3UT/zHLHa0CD1PtXtQRMPCPnlAZ9TJtlGXqodYg71/sHdATxnjSJR4cWyjcxfK1Up5OecuZoZrTbkMz37JiGwK5EE582ZBJxzrkQbezNvTwUZaK8qabE1StrBz0yDWK27tIkAGvgggGZG8mqVDCUTP3IDQkSFijxp8=,iv:PumjU9d8Ww4D6Amy8WoH6A8RP3Sp1qMEFWMvrFQwNZo=,tag:J0WqKqRDopy/3rquvfXMuA==,type:str]
+  pgp:
+    - created_at: "2025-12-17T09:48:46Z"
+      enc: |-
+        -----BEGIN PGP MESSAGE-----
+
+        hQIMAzGhsZ0P8d8aARAAjTtH3TP5Viy0WYVcbN+GDvDdIHrNfdAV9LzMgdX+ZgjA
+        R579+SCCpSg0Tm2m3WiBSRLPrRoeLAlfJ+1L95XOP/xDVYUgpE2Ke5VMSuFqePJP
+        z9CMDfBK1Aaq5XvvuwxGdkR0Ou5JDbXbM5qwWbj701qSf33dC7QxUZgsctZH+5Wx
+        CLQy6X3jlI5BpdchwFPQ90ca6zeYeTZIp3TacEaNkt+VaCNZGvw4jnawr/Yi29M5
+        X3K6iZIV6y1E55EZR9IYI9olndM76Uz4yq+Ku2JOVmuPir1UR+eiDC1fIy7JGPZl
+        FLoHS2N84n//DykkqHhKwxUyVxeyhYidS7brBvxlCSIIUKH9XIeOv9Lh4OoXuu/Z
+        Zs4+KCvn3JVX4RbpuIUxEcD07z9SZ9574BeOZ1r4Yya7hxcJ9Gr9EOSEp9+cNjeu
+        TSfFQQadI51aPj6UYqK26C0wKSXT6L9TyxNS76DulnTZryj5eN7jSgzwiet9ZFfr
+        J9hkbazX1KTmCiI/DmOljq1TBXPx7AKB8tkjAKbg56A6eIi8rhuJ92Kbqx/l4HaB
+        84cQ/RozOXbRIlIeCJI1vPIoBv47Bw4v1X4I6ckwnI4zgvhblp3BG/wndd7Y7ZKf
+        Ne9o5eXIHs8I2QBl0wGyv4xwJhvrjKd0oIMieI3Tdy0nuS5K5uUfsbKzyVh7BnbU
+        ZgEJAhAL+xhQONz2+QpGnDK/9f/D6UgmRaBa9d2pyOMC9f8sZsD4DpeUByF8Sajt
+        CbrEs4x+sJGl24zd0+yGDf7CS3mTkRCZWfvjY6aj0+DHcKuOC/Sx9avPSK26ITJB
+        mVOGSkfpdw==
+        =69yI
+        -----END PGP MESSAGE-----
+      fp: 8ECEEAB78C379D845704FF358C76E8F3042C582E
+  encrypted_regex: ^(data|stringData)$
+  version: 3.11.0
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-provisioning
+  namespace: observability
+data:
+  apps.yaml: |
+    apiVersion: 1
+
+    apps:
+      - type: ricoberger-kubernetes-app
+        org_id: 1
+        org_name: Main Org.
+        disabled: false
+
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: Grafana
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  persistentVolumeClaim:
+    spec:
+      accessModes:
+        - ReadWriteOnce
+      resources:
+        requests:
+          storage: 1Gi
+  deployment:
+    spec:
+      replicas: 1
+      strategy:
+        type: Recreate
+      template:
+        metadata:
+          annotations:
+            prometheus.io/scrape: "true"
+            prometheus.io/port: "3000"
+        spec:
+          containers:
+            - name: grafana
+              env:
+                - name: GF_SECURITY_ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      key: GF_SECURITY_ADMIN_USER
+                      name: grafana-credentials
+                - name: GF_SECURITY_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: GF_SECURITY_ADMIN_PASSWORD
+                      name: grafana-credentials
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+                runAsGroup: 10001
+                runAsNonRoot: true
+                runAsUser: 10001
+                seccompProfile:
+                  type: "RuntimeDefault"
+              volumeMounts:
+                - mountPath: /etc/grafana/provisioning/plugins/apps.yaml
+                  name: grafana-provisioning
+                  subPath: apps.yaml
+            - name: kubernetes-plugin
+              image: alpine/curl:8.14.1
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  while :; do
+                    # curl -X GET -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" -Lw '{"code": "%{http_code}", "time": "%{time_total}"}\n' -s -o /dev/null 'http://localhost:3000/api/datasources/uid/kubernetes/health'
+                    curl -X GET -u "$GF_SECURITY_ADMIN_USER:$GF_SECURITY_ADMIN_PASSWORD" -L -s -o /dev/null 'http://localhost:3000/api/datasources/uid/kubernetes/health'
+                    sleep 5
+                  done
+              env:
+                - name: GF_SECURITY_ADMIN_USER
+                  valueFrom:
+                    secretKeyRef:
+                      key: GF_SECURITY_ADMIN_USER
+                      name: grafana-credentials
+                - name: GF_SECURITY_ADMIN_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: GF_SECURITY_ADMIN_PASSWORD
+                      name: grafana-credentials
+              readinessProbe:
+                exec:
+                  command:
+                    - /bin/sh
+                    - -c
+                    - echo "Ready"
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 32Mi
+                limits:
+                  memory: 32Mi
+              securityContext:
+                allowPrivilegeEscalation: false
+                capabilities:
+                  drop:
+                    - ALL
+                privileged: false
+                readOnlyRootFilesystem: true
+                runAsGroup: 65534
+                runAsNonRoot: true
+                runAsUser: 65534
+                seccompProfile:
+                  type: "RuntimeDefault"
+          topologySpreadConstraints:
+            - labelSelector:
+                matchLabels:
+                  app: grafana
+              maxSkew: 1
+              topologyKey: kubernetes.io/hostname
+              whenUnsatisfiable: ScheduleAnyway
+          volumes:
+            - configMap:
+                defaultMode: 420
+                name: grafana-provisioning
+              name: grafana-provisioning
+            - name: grafana-data
+              persistentVolumeClaim:
+                claimName: grafana-pvc
+  disableDefaultAdminSecret: true
+  config:
+    log:
+      mode: console
+      level: warn
+    log.console:
+      format: json
+    users:
+      auto_assign_org_role: Editor
+    auth.anonymous:
+      enabled: "false"
+    server:
+      root_url: https://grafana.homelab.ricoberger.dev
+    unified_alerting:
+      enabled: "false"
+    plugins:
+      plugin_admin_enabled: "false"
+      allow_loading_unsigned_plugins: ricoberger-kubernetes-app,ricoberger-kubernetes-datasource
+      preinstall_sync: grafana-clickhouse-datasource,ricoberger-kubernetes-app@0.4.1@https://github.com/ricoberger/grafana-kubernetes-plugin/releases/download/v0.4.1/ricoberger-kubernetes-app-0.4.1.zip
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  parentRefs:
+    - name: istio-ingress
+      namespace: istio-ingress
+  hostnames:
+    - "grafana.homelab.ricoberger.dev"
+  rules:
+    - backendRefs:
+        - name: grafana-service
+          port: 3000
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: grafana
+  namespace: observability
+spec:
+  endpoints:
+    - dnsName: grafana.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - 192.168.2.143

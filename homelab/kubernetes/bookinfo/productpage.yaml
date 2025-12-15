@@ -1,0 +1,123 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productpage
+  namespace: bookinfo
+  labels:
+    app: productpage
+    service: productpage
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: productpage
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: productpage-v1
+  namespace: bookinfo
+spec:
+  ports:
+    - port: 9080
+      name: http
+  selector:
+    app: productpage
+    version: v1
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: productpage
+  namespace: bookinfo
+  labels:
+    account: productpage
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: productpage-v1
+  namespace: bookinfo
+  labels:
+    app: productpage
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: productpage
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: productpage
+        version: v1
+    spec:
+      serviceAccountName: productpage
+      containers:
+        - name: productpage
+          image: docker.io/istio/examples-bookinfo-productpage-v1:1.20.3
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: productpage
+  namespace: bookinfo
+spec:
+  parentRefs:
+    - name: istio-ingress
+      namespace: istio-ingress
+  hostnames:
+    - "bookinfo.homelab.ricoberger.dev"
+  rules:
+    - matches:
+        - path:
+            type: Exact
+            value: /
+        - path:
+            type: Exact
+            value: /productpage
+        - path:
+            type: PathPrefix
+            value: /static
+        - path:
+            type: Exact
+            value: /login
+        - path:
+            type: Exact
+            value: /logout
+        - path:
+            type: PathPrefix
+            value: /api/v1/products
+      backendRefs:
+        - name: productpage
+          port: 9080
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: bookinfo
+  namespace: bookinfo
+spec:
+  endpoints:
+    - dnsName: bookinfo.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - 192.168.2.143

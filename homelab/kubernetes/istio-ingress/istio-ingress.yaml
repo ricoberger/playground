@@ -1,0 +1,105 @@
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-ingress
+  namespace: istio-ingress
+spec:
+  secretName: istio-ingress
+  issuerRef:
+    name: letsencrypt
+    kind: ClusterIssuer
+  dnsNames:
+    - "*.homelab.ricoberger.dev"
+  privateKey:
+    rotationPolicy: Always
+    size: 4096
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: istio-ingress
+  namespace: istio-ingress
+data:
+  deployment: |
+    spec:
+      template:
+        spec:
+          containers:
+            - name: istio-proxy
+              resources:
+                requests:
+                  cpu: 10m
+                  memory: 64Mi
+                limits:
+                  memory: 64Mi
+          nodeSelector:
+            node-role.kubernetes.io/control-plane: "true"
+
+  service: |
+    spec:
+      ports:
+        - appProtocol: http
+          name: http
+          nodePort: 30080
+          port: 80
+          protocol: TCP
+          targetPort: 80
+        - appProtocol: https
+          name: https
+          nodePort: 30443
+          port: 443
+          protocol: TCP
+          targetPort: 443
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: istio-ingress
+  namespace: istio-ingress
+  annotations:
+    networking.istio.io/service-type: NodePort
+spec:
+  gatewayClassName: istio
+  infrastructure:
+    parametersRef:
+      group: ""
+      kind: ConfigMap
+      name: istio-ingress
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+    - name: https
+      protocol: HTTPS
+      port: 443
+      hostname: "*.homelab.ricoberger.dev"
+      allowedRoutes:
+        namespaces:
+          from: All
+      tls:
+        certificateRefs:
+          - kind: Secret
+            group: ""
+            name: istio-ingress
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: istio-ingress
+  namespace: istio-ingress
+spec:
+  parentRefs:
+    - name: istio-ingress
+      sectionName: http
+  hostnames:
+    - "*.homelab.ricoberger.dev"
+  rules:
+    - filters:
+        - type: RequestRedirect
+          requestRedirect:
+            scheme: https
+            statusCode: 301
