@@ -1,0 +1,8 @@
+mirrors:
+  registry.homelab.ricoberger.dev:5555:
+    endpoint:
+      - http://homelab-registry:5000/v2
+configs:
+  registry.homelab.ricoberger.dev:5555:
+    tls:
+      insecure_skip_verify: true
