@@ -55,6 +55,17 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
+  name: open-telemetry
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://ghcr.io/open-telemetry/opentelemetry-helm-charts
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
   name: ricoberger
   namespace: flux-system
 spec:

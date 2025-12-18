@@ -1,0 +1,151 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: otel-demo
+  namespace: otel-demo
+spec:
+  releaseName: otel-demo
+  chart:
+    spec:
+      chart: opentelemetry-demo
+      version: 0.39.0
+      sourceRef:
+        kind: HelmRepository
+        name: open-telemetry
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+  interval: 15m
+  timeout: 10m
+  values:
+    default:
+      env:
+        - name: OTEL_SERVICE_NAME
+          valueFrom:
+            fieldRef:
+              apiVersion: v1
+              fieldPath: "metadata.labels['app.kubernetes.io/component']"
+        - name: OTEL_COLLECTOR_NAME
+          value: otel-collector-agent.observability.svc.cluster.local
+        - name: OTEL_EXPORTER_OTLP_METRICS_TEMPORALITY_PREFERENCE
+          value: cumulative
+        - name: OTEL_RESOURCE_ATTRIBUTES
+          value:
+            "service.name=$(OTEL_SERVICE_NAME),service.namespace=opentelemetry-demo,service.version={{
+            .Chart.AppVersion }}"
+
+    components:
+      accounting:
+        enabled: true
+
+      ad:
+        enabled: true
+
+      cart:
+        enabled: true
+
+      checkout:
+        enabled: true
+
+      currency:
+        enabled: true
+
+      email:
+        enabled: true
+
+      fraud-detection:
+        enabled: true
+
+      frontend:
+        enabled: true
+        envOverrides:
+          - name: PUBLIC_OTEL_EXPORTER_OTLP_TRACES_ENDPOINT
+            value: https://otel-demo.homelab.ricoberger.dev/otlp-http/v1/traces
+
+      frontend-proxy:
+        enabled: true
+
+      image-provider:
+        enabled: true
+
+      load-generator:
+        enabled: true
+
+      payment:
+        enabled: true
+
+      product-catalog:
+        enabled: true
+
+      quote:
+        enabled: true
+
+      recommendation:
+        enabled: true
+
+      shipping:
+        enabled: true
+
+      flagd:
+        enabled: true
+
+      kafka:
+        enabled: true
+
+      postgresql:
+        enabled: true
+
+      valkey-cart:
+        enabled: true
+
+    opentelemetry-collector:
+      enabled: false
+
+    jaeger:
+      enabled: false
+
+    prometheus:
+      enabled: false
+
+    grafana:
+      enabled: false
+
+    opensearch:
+      enabled: false
+
+---
+# The following services are exposed via this HTTPRoute:
+# - Web store: http://otel-demo.homelab.ricoberger.dev/
+# - Load Generator UI: http://otel-demo.homelab.ricoberger.dev/loadgen/
+# - Flagd configurator UI: http://otel-demo.homelab.ricoberger.dev/feature
+#
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: otel-demo
+  namespace: otel-demo
+spec:
+  parentRefs:
+    - name: istio-ingress
+      namespace: istio-ingress
+  hostnames:
+    - "otel-demo.homelab.ricoberger.dev"
+  rules:
+    - backendRefs:
+        - name: frontend-proxy
+          port: 8080
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: otel-demo
+  namespace: otel-demo
+spec:
+  endpoints:
+    - dnsName: otel-demo.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - 192.168.2.143
