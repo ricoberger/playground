@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: echoserver
+  namespace: observability
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  uid: echoserver
+  title: echoserver

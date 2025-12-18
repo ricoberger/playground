@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: cert-manager
+  namespace: observability
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  uid: cert-manager
+  title: cert-manager

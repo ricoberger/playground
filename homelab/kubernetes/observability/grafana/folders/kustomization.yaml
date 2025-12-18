@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - bookinfo.yaml
+  - cert-manager.yaml
+  - clickhouse-operator.yaml
+  - echoserver.yaml
+  - external-dns.yaml
+  - flux-system.yaml
+  - istio-ingress.yaml
+  - istio-system.yaml
+  - observability.yaml
+  - otel-demo.yaml

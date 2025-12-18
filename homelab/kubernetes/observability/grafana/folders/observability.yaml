@@ -1,0 +1,11 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaFolder
+metadata:
+  name: observability
+  namespace: observability
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  uid: observability
+  title: observability
