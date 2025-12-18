@@ -1,0 +1,54 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: istio-cni
+  namespace: istio-system
+spec:
+  releaseName: istio-cni
+  chart:
+    spec:
+      chart: cni
+      version: 1.28.1
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+  interval: 15m
+  timeout: 10m
+  # See https://github.com/istio/istio/blob/1.28.1/manifests/helm-profiles/ambient.yaml
+  # See https://github.com/istio/istio/blob/1.28.1/manifests/helm-profiles/platform-k3s.yaml
+  values:
+    # CNI-and-platform specific path defaults.
+    # These may need to be set to platform-specific values, consult
+    # overrides for your platform in `manifests/helm-profiles/platform-*.yaml`
+    cniConfDir: /var/lib/rancher/k3s/agent/etc/cni/net.d
+    cniBinDir: /var/lib/rancher/k3s/data/cni
+
+    # Configure ambient settings
+    ambient:
+      # If enabled, ambient redirection will be enabled
+      enabled: true
+
+    resources:
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
+    global:
+      variant: "distroless"
+
+      # Change cni scope level to control logging out of istio-cni-node
+      # DaemonSet.
+      logging:
+        level: info
+
+      logAsJson: true
+
+      # Default resources allocated
+      defaultResources:
+        requests:
+          cpu: 10m
+          memory: 64Mi

@@ -1,0 +1,49 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: kubernetes
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  resyncPeriod: 0m
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  valuesFrom:
+    - targetPath: jsonData.grafanaUsername
+      valueFrom:
+        secretKeyRef:
+          key: GF_SECURITY_ADMIN_USER
+          name: grafana-credentials
+    - targetPath: secureJsonData.grafanaPassword
+      valueFrom:
+        secretKeyRef:
+          key: GF_SECURITY_ADMIN_PASSWORD
+          name: grafana-credentials
+  datasource:
+    name: Kubernetes
+    type: ricoberger-kubernetes-datasource
+    uid: kubernetes
+    access: proxy
+    isDefault: false
+    orgId: 1
+    editable: false
+    jsonData:
+      clusterProvider: incluster
+      grafanaUsername: ${GF_SECURITY_ADMIN_USER}
+      impersonateUser: true
+      impersonateGroups: true
+      generateKubeconfig: true
+      generateKubeconfigName: homelab
+      generateKubeconfigTTL: 604800
+      generateKubeconfigPort: 11716
+      generateKubeconfigRedirectUrls:
+        - http://localhost:11716
+      integrationsMetricsDatasourceUid: prometheus
+      integrationsMetricsKubeletJob: kubelet
+      integrationsMetricsKubeStateMetricsJob: kube-state-metrics
+      integrationsMetricsNodeExporterJob: node-exporter
+      integrationsTracesQuery:
+    secureJsonData:
+      grafanaPassword: ${GF_SECURITY_ADMIN_PASSWORD}

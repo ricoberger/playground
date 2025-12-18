@@ -1,0 +1,20 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: prometheus
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  datasource:
+    name: Prometheus
+    type: prometheus
+    uid: prometheus
+    access: proxy
+    isDefault: true
+    orgId: 1
+    editable: false
+    url: http://prometheus.observability.svc.cluster.local:9090

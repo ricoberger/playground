@@ -1,0 +1,38 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: ztunnel
+  namespace: istio-system
+spec:
+  releaseName: ztunnel
+  chart:
+    spec:
+      chart: ztunnel
+      version: 1.28.1
+      sourceRef:
+        kind: HelmRepository
+        name: istio
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+  interval: 15m
+  timeout: 10m
+  values:
+    variant: "distroless"
+
+    # Pod resource configuration
+    resources:
+      requests:
+        cpu: 10m
+        # Ztunnel memory scales with the size of the cluster and traffic load
+        # While there are many factors, this is enough for ~200k pod cluster or
+        # 100k concurrently open connections.
+        memory: 64Mi
+
+    # Configuration log level of ztunnel binary, default is info.
+    # Valid values are: trace, debug, info, warn, error
+    logLevel: info
+
+    # To output all logs in json format
+    logAsJson: true
