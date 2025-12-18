@@ -1,0 +1,66 @@
+---
+name: Auto Merge
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  automerge:
+    name: Auto Merge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: main
+
+      - name: Merge
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          BASE_BRANCH="main"
+          DEV_BRANCH="dev"
+
+          echo "Fetching latest changes..."
+          git fetch origin
+
+          echo "Checking out $DEV_BRANCH..."
+          if git rev-parse --verify $DEV_BRANCH >/dev/null 2>&1; then
+              echo "$DEV_BRANCH exists, checking out and resetting to $BASE_BRANCH..."
+              git checkout $DEV_BRANCH
+              git reset --hard origin/$BASE_BRANCH
+          else
+              echo "$DEV_BRANCH does not exist, creating from $BASE_BRANCH..."
+              git checkout -b $DEV_BRANCH origin/$BASE_BRANCH
+          fi
+
+          echo "Fetching open pull requests..."
+          PR_BRANCHES=$(gh pr list --state open --json headRefName --jq '.[].headRefName')
+
+          if [ -z "$PR_BRANCHES" ]; then
+              echo "No open pull requests found."
+          else
+              echo "Found open pull requests with branches:"
+              echo "$PR_BRANCHES"
+
+              for BRANCH in $PR_BRANCHES; do
+                  echo ""
+                  echo "Merging branch: $BRANCH"
+                  git fetch origin $BRANCH:$BRANCH 2>/dev/null || git fetch origin $BRANCH
+                  git merge $BRANCH --no-edit -m "Merge PR branch $BRANCH into $DEV_BRANCH"
+              done
+          fi
+
+          echo ""
+          echo "Pushing $DEV_BRANCH to remote..."
+          git push origin $DEV_BRANCH --force
+
+          echo ""
+          echo "Done! The $DEV_BRANCH branch now contains $BASE_BRANCH and all open PRs."
