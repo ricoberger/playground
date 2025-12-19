@@ -163,6 +163,7 @@ data:
       transform/logs:
         error_mode: silent
         log_statements:
+          # Set service.name from Kubernetes labels if not already set
           - context: log
             conditions:
               - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.app"] != nil
@@ -183,6 +184,12 @@ data:
               - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.container.name"] != nil
             statements:
               - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"])
+          # Set service.namespace from Kubernetes namespace if not already set
+          - context: log
+            conditions:
+              - resource.attributes["service.namespace"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.namespace.name"] != nil
+            statements:
+              - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"])
           # Parse traceparent 00-6ac7dfc54b57c09403006ad060449762-a300e6b481aa1c09-01 from Istio logs
           - context: log
             conditions:

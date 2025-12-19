@@ -66,6 +66,8 @@ spec:
         value: otlp
       - name: OTEL_TRACES_EXPORTER
         value: otlp
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.namespace=echoserver
 
 ---
 apiVersion: gateway.networking.k8s.io/v1

@@ -25,6 +25,9 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          git config --global user.name "ricoberger"
+          git config --global user.email "mail@ricoberger.de"
+
           BASE_BRANCH="main"
           DEV_BRANCH="dev"
 
