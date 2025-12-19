@@ -10,3 +10,7 @@ resources:
   - istio-wasm-extensions-dashboard.yaml
   - istio-workload-dashboard.yaml
   - istio-ztunnel-dashboard.yaml
+  - observability-otel-collector-dashboard.yaml
+  - otel-demo-apm-dashboard.yaml
+  - otel-demo-exemplars-dashboard.yaml
+  - otel-demo-spanmetrics-dashboard.yaml

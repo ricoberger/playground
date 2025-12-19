@@ -114,6 +114,136 @@ spec:
     opensearch:
       enabled: false
 
+  postRenderers:
+    - kustomize:
+        patches:
+          - target:
+              version: v1
+              kind: Service
+              name: ad
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: cart
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: checkout
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: currency
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: email
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: frontend
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: frontend-proxy
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: image-provider
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: load-generator
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: payment
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: product-catalog
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: quote
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: recommendation
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+          - target:
+              version: v1
+              kind: Service
+              name: shipping
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: http
+          - target:
+              version: v1
+              kind: Service
+              name: flagd
+            patch: |
+              - op: add
+                path: /spec/ports/0/appProtocol
+                value: grpc
+              - op: add
+                path: /spec/ports/1/appProtocol
+                value: http
+              - op: add
+                path: /spec/ports/1/appProtocol
+                value: http
+
 ---
 # The following services are exposed via this HTTPRoute:
 # - Web store: http://otel-demo.homelab.ricoberger.dev/
