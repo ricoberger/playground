@@ -99,6 +99,7 @@ data:
       evaluation_interval: 1m
       scrape_interval: 15s
       scrape_timeout: 10s
+      # query_log_file: /dev/stdout
     storage:
       tsdb:
         out_of_order_time_window: 30m
@@ -521,6 +522,8 @@ spec:
           image: docker.io/prom/prometheus:v3.8.0
           imagePullPolicy: "IfNotPresent"
           args:
+            - --log.level=info
+            - --log.format=json
             - --storage.tsdb.retention.time=5d
             - --config.file=/etc/config/prometheus.yml
             - --storage.tsdb.path=/data
