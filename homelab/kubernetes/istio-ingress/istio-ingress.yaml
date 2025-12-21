@@ -25,6 +25,9 @@ data:
   deployment: |
     spec:
       template:
+        metadata:
+          labels:
+            app: istio-ingress
         spec:
           containers:
             - name: istio-proxy
