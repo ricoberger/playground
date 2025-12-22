@@ -214,8 +214,8 @@ spec:
       enabled: "false"
     plugins:
       plugin_admin_enabled: "false"
-      allow_loading_unsigned_plugins: ricoberger-kubernetes-app,ricoberger-kubernetes-datasource
-      preinstall_sync: grafana-clickhouse-datasource,ricoberger-kubernetes-app@0.4.1@https://github.com/ricoberger/grafana-kubernetes-plugin/releases/download/v0.4.1/ricoberger-kubernetes-app-0.4.1.zip
+      allow_loading_unsigned_plugins: ricoberger-istio-datasource,ricoberger-kubernetes-app,ricoberger-kubernetes-datasource
+      preinstall_sync: grafana-clickhouse-datasource,ricoberger-istio-datasource@0.1.0@https://github.com/ricoberger/grafana-istio-plugin/releases/download/v0.1.0/ricoberger-istio-datasource-0.1.0.zip,ricoberger-kubernetes-app@0.4.1@https://github.com/ricoberger/grafana-kubernetes-plugin/releases/download/v0.4.1/ricoberger-kubernetes-app-0.4.1.zip
 
 ---
 apiVersion: gateway.networking.k8s.io/v1
