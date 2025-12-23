@@ -235,13 +235,10 @@ spec:
               name: flagd
             patch: |
               - op: add
-                path: /spec/ports/0/appProtocol
-                value: grpc
-              - op: add
                 path: /spec/ports/1/appProtocol
                 value: http
               - op: add
-                path: /spec/ports/1/appProtocol
+                path: /spec/ports/2/appProtocol
                 value: http
 
 ---
