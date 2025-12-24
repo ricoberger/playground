@@ -1,0 +1,101 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: echoserver-alt
+  namespace: echoserver
+spec:
+  releaseName: echoserver-alt
+  chart:
+    spec:
+      chart: echoserver
+      version: 1.1.2
+      sourceRef:
+        kind: HelmRepository
+        name: ricoberger
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Skip
+  upgrade:
+    crds: Skip
+  interval: 15m
+  timeout: 10m
+  values:
+    podLabels:
+      app: echoserver-alt
+
+    resources:
+      limits:
+        memory: 64Mi
+      requests:
+        cpu: 10m
+        memory: 64Mi
+
+    securityContext:
+      allowPrivilegeEscalation: false
+      capabilities:
+        drop:
+          - ALL
+      readOnlyRootFilesystem: true
+      runAsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+
+    service:
+      labels:
+        app: echoserver-alt
+
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app.kubernetes.io/name: echoserver-alt
+
+    env:
+      - name: OTEL_EXPORTER_OTLP_ENDPOINT
+        value: http://otel-collector-agent.observability.svc.cluster.local:4317
+      - name: OTEL_LOGS_EXPORTER
+        value: otlp
+      - name: OTEL_METRICS_EXPORTER
+        value: otlp
+      - name: OTEL_TRACES_EXPORTER
+        value: otlp
+      - name: OTEL_RESOURCE_ATTRIBUTES
+        value: service.name=echoserver-alt,service.namespace=echoserver
+
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: echoserver-alt
+  namespace: echoserver
+spec:
+  parentRefs:
+    - name: istio-ingress
+      namespace: istio-ingress
+  hostnames:
+    - "echoserver-alt.homelab.ricoberger.dev"
+  rules:
+    - backendRefs:
+        - name: echoserver-alt
+          port: 8080
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: echoserver-alt
+  namespace: echoserver
+spec:
+  endpoints:
+    - dnsName: echoserver-alt.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - 192.168.2.143
