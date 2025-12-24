@@ -3,11 +3,8 @@ name: Auto Merge
 
 on:
   push:
-    branches:
-      - main
+    branches-ignore: [dev]
   pull_request:
-    branches:
-      - main
     types:
       - closed
 
@@ -59,7 +56,12 @@ jobs:
                   echo ""
                   echo "Merging branch: $BRANCH"
                   git fetch origin $BRANCH:$BRANCH 2>/dev/null || git fetch origin $BRANCH
-                  git merge $BRANCH --no-edit -m "Merge PR branch $BRANCH into $DEV_BRANCH"
+                  if ! git merge $BRANCH --no-edit --allow-unrelated-histories -m "Merge PR branch $BRANCH into $DEV_BRANCH"; then
+                      echo "Merge conflict detected, resolving by accepting PR branch changes..."
+                      git checkout --theirs .
+                      git add .
+                      git commit --no-edit -m "Merge PR branch $BRANCH into $DEV_BRANCH"
+                  fi
               done
           fi
 
