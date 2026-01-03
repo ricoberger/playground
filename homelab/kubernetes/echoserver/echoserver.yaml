@@ -70,6 +70,7 @@ spec:
         value: service.namespace=echoserver
 
 ---
+# curl -o /dev/null -s -w 'Total: %{time_total}s | Status: %{http_code}\n' 'https://echoserver-http.homelab.ricoberger.dev/status?status=random'
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
@@ -80,21 +81,53 @@ spec:
     - name: istio-ingress
       namespace: istio-ingress
   hostnames:
-    - "echoserver.homelab.ricoberger.dev"
+    - "echoserver-http.homelab.ricoberger.dev"
   rules:
     - backendRefs:
         - name: echoserver
           port: 8080
 
 ---
-apiVersion: externaldns.k8s.io/v1alpha1
-kind: DNSEndpoint
+# grpcurl -format-error -authority echoserver-grpc.homelab.ricoberger.dev -d '{ "status": "random" }' echoserver-grpc.homelab.ricoberger.dev:443 Echoserver.Status
+apiVersion: gateway.networking.k8s.io/v1
+kind: GRPCRoute
 metadata:
   name: echoserver
   namespace: echoserver
 spec:
+  parentRefs:
+    - name: istio-ingress
+      namespace: istio-ingress
+  hostnames:
+    - "echoserver-grpc.homelab.ricoberger.dev"
+  rules:
+    - backendRefs:
+        - name: echoserver
+          port: 8081
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: echoserver-http
+  namespace: echoserver
+spec:
   endpoints:
-    - dnsName: echoserver.homelab.ricoberger.dev
+    - dnsName: echoserver-http.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - 192.168.2.143
+
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: echoserver-grpc
+  namespace: echoserver
+spec:
+  endpoints:
+    - dnsName: echoserver-grpc.homelab.ricoberger.dev
       recordTTL: 300
       recordType: A
       targets:
