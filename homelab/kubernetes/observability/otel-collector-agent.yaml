@@ -158,8 +158,8 @@ data:
                 from: pod
       resourcedetection:
         detectors:
-        - env
-        - system
+          - env
+          - system
       transform/logs:
         error_mode: silent
         log_statements:
@@ -307,6 +307,7 @@ spec:
       port: 14250
       targetPort: 14250
       protocol: TCP
+      appProtocol: grpc
     - name: jaeger-thrift
       port: 14268
       targetPort: 14268
@@ -350,10 +351,10 @@ spec:
           args:
             - --config=/otel-collector/config/config.yaml
           ports:
-            - name: otel-grpc
+            - name: otlp-grpc
               containerPort: 4317
               protocol: TCP
-            - name: otel-http
+            - name: otlp-http
               containerPort: 4318
               protocol: TCP
             - name: metrics
