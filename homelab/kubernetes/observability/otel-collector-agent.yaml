@@ -119,6 +119,14 @@ data:
         endpoint: http://prometheus:9090/api/v1/otlp
         tls:
           insecure: true
+      otlphttp/victoriastack:
+        compression: gzip
+        encoding: proto
+        metrics_endpoint: http://vminsert-vmcluster.victoriastack.svc.cluster.local:8480/insert/0/opentelemetry/v1/metrics
+        logs_endpoint: http://vlinsert-vlcluster.victoriastack.svc.cluster.local:9481/insert/opentelemetry/v1/logs
+        traces_endpoint: http://vtinsert-vtcluster.victoriastack.svc.cluster.local:10481/insert/opentelemetry/v1/traces
+        tls:
+          insecure: true
 
     processors:
       batch:
@@ -160,6 +168,8 @@ data:
         detectors:
           - env
           - system
+      deltatocumulative:
+        max_stale: 5m
       transform/logs:
         error_mode: silent
         log_statements:
@@ -202,8 +212,11 @@ data:
               - delete_key(attributes, "trace-id")
               - delete_key(attributes, "span-id")
       transform/traces:
-        error_mode: ignore
+        error_mode: silent
         trace_statements:
+          - context: span
+            statements:
+              - set(resource.attributes["service.name_original"], resource.attributes["service.name"])
           - context: span
             statements:
               - replace_pattern(name, "\\?.*", "")
@@ -251,6 +264,7 @@ data:
             - transform/logs
           exporters:
             - clickhouse
+            - otlphttp/victoriastack
         metrics:
           receivers:
             - otlp
@@ -260,8 +274,10 @@ data:
             - batch
             - k8sattributes
             - resourcedetection
+            - deltatocumulative
           exporters:
             - otlphttp/prometheus
+            - otlphttp/victoriastack
         traces:
           receivers:
             - otlp
@@ -275,6 +291,7 @@ data:
             - transform/traces
           exporters:
             - clickhouse
+            - otlphttp/victoriastack
             - spanmetrics
 
 ---

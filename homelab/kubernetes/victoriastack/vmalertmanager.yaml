@@ -1,0 +1,41 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlertmanager
+metadata:
+  name: vmalertmanager
+  namespace: victoriastack
+spec:
+  configSelector: {}
+  configNamespaceSelector: {}
+  logFormat: json
+  logLevel: info
+  podDisruptionBudget:
+    maxUnavailable: 1
+  podMetadata:
+    labels:
+      app: vmalertmanager
+  replicaCount: 1
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    fsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  storage:
+    volumeClaimTemplate:
+      metadata:
+        labels:
+          app: vmalertmanager
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: vmalertmanager

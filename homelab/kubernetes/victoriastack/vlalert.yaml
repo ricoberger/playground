@@ -1,0 +1,41 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAlert
+metadata:
+  name: vlalert
+  namespace: victoriastack
+spec:
+  datasource:
+    url: http://vlselect-vlcluster.victoriastack.svc.cluster.local:9471
+  logFormat: json
+  logLevel: INFO
+  extraArgs:
+    rule.defaultRuleType: vlogs
+  notifiers:
+    - url: http://vmalertmanager-vmalertmanager-0.vmalertmanager-vmalertmanager.victoriastack.svc.cluster.local:9093
+  podDisruptionBudget:
+    maxUnavailable: 1
+  podMetadata:
+    labels:
+      app: vlalert
+  remoteRead:
+    url: http://vmselect-vmcluster.victoriastack.svc.cluster.local:8481/select/0/prometheus
+  remoteWrite:
+    url: http://vminsert-vmcluster.victoriastack.svc.cluster.local:8480/insert/0/prometheus
+  replicaCount: 1
+  ruleSelector:
+    matchLabels:
+      vlalert: "true"
+  ruleNamespaceSelector: {}
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+      labelSelector:
+        matchLabels:
+          app: vlalert

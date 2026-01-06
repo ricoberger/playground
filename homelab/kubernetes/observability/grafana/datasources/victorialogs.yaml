@@ -1,0 +1,28 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: victorialogs
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  datasource:
+    name: VictoriaLogs
+    type: victoriametrics-logs-datasource
+    uid: victorialogs
+    access: proxy
+    isDefault: false
+    orgId: 1
+    editable: false
+    url: http://vlselect-vlcluster.victoriastack.svc.cluster.local:9471
+    jsonData:
+      derivedFields:
+        - datasourceUid: victoriatraces
+          matcherRegex: trace_id
+          matcherType: label
+          name: Trace
+          url: "${__value.raw}"
+          urlDisplayLabel: View Trace
