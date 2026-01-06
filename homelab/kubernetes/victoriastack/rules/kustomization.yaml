@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - alertmanager.yaml
+  - general.yaml
+  - kube-apiserver.yaml
+  - kube-scheduler.yaml
+  - kubelet.yaml
+  - kubernetes-storage.yaml
+  - victoriametrics.yaml
