@@ -1,0 +1,23 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: alertmanager
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  datasource:
+    name: Alertmanager
+    type: alertmanager
+    uid: alertmanager
+    access: proxy
+    isDefault: false
+    orgId: 1
+    editable: false
+    url: http://vmalertmanager-vmalertmanager.victoriastack.svc.cluster.local:9093
+    jsonData:
+      implementation: prometheus
+      handleGrafanaManagedAlerts: true

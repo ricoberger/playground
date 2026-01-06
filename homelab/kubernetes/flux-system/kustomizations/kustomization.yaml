@@ -12,3 +12,4 @@ resources:
   - istio-system.yaml
   - observability.yaml
   - otel-demo.yaml
+  - victoriastack.yaml

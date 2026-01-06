@@ -1,0 +1,66 @@
+---
+apiVersion: operator.victoriametrics.com/v1
+kind: VTCluster
+metadata:
+  name: vtcluster
+  namespace: victoriastack
+spec:
+  insert:
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vtinsert
+    replicaCount: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vtinsert
+
+  select:
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vtselect
+    replicaCount: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vtselect
+
+  storage:
+    retentionPeriod: 5d
+    logFormat: json
+    logLevel: INFO
+    extraArgs:
+      servicegraph.enableTask: "true"
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vtstorage
+    replicaCount: 1
+    storage:
+      volumeClaimTemplate:
+        spec:
+          resources:
+            requests:
+              storage: 10Gi
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vtstorage

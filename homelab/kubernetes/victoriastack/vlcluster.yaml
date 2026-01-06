@@ -1,0 +1,64 @@
+---
+apiVersion: operator.victoriametrics.com/v1
+kind: VLCluster
+metadata:
+  name: vlcluster
+  namespace: victoriastack
+spec:
+  vlinsert:
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vlinsert
+    replicaCount: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vlinsert
+
+  vlselect:
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vlselect
+    replicaCount: 1
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vlselect
+
+  vlstorage:
+    retentionPeriod: 5d
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vlstorage
+    replicaCount: 1
+    storage:
+      volumeClaimTemplate:
+        spec:
+          resources:
+            requests:
+              storage: 10Gi
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vlstorage
