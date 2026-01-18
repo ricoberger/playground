@@ -1,0 +1,22 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: victoriastack
+  name: echoserver
+  labels:
+    vlalert: "true"
+spec:
+  groups:
+    - name: echoserver-alerts
+      interval: 5m
+      type: vlogs
+      rules:
+        - alert: EchoserverHigh5xxErrors
+          expr: |
+            * | service.namespace:="echoserver" AND service.name:="echoserver" AND http.response.status_code:>=500 | stats count() as httpErrors | filter httpErrors:>0
+          labels:
+            severity: error
+          annotations:
+            summary: |
+              echoserver high number of 5xx errors: {{ $value }}

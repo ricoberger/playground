@@ -1,0 +1,103 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: victoriastack
+  name: istio
+  labels:
+    vmalert: "true"
+spec:
+  groups:
+    - name: istio-recording
+      interval: 15s
+      rules:
+        - record: workload:istio_requests_total
+          expr: |
+            sum without(instance, node, pod) (istio_requests_total)
+
+        - record: workload:istio_request_duration_milliseconds_count
+          expr: |
+            sum without(instance, node, pod) (istio_request_duration_milliseconds_count)
+
+        - record: workload:istio_request_duration_milliseconds_sum
+          expr: |
+            sum without(instance, node, pod) (istio_request_duration_milliseconds_sum)
+
+        - record: workload:istio_request_duration_milliseconds_bucket
+          expr: |
+            sum without(instance, node, pod) (istio_request_duration_milliseconds_bucket)
+
+        - record: workload:istio_request_bytes_count
+          expr: |
+            sum without(instance, node, pod) (istio_request_bytes_count)
+
+        - record: workload:istio_request_bytes_sum
+          expr: |
+            sum without(instance, node, pod) (istio_request_bytes_sum)
+
+        - record: workload:istio_request_bytes_bucket
+          expr: |
+            sum without(instance, node, pod) (istio_request_bytes_bucket)
+
+        - record: workload:istio_response_bytes_count
+          expr: |
+            sum without(instance, node, pod) (istio_response_bytes_count)
+
+        - record: workload:istio_response_bytes_sum
+          expr: |
+            sum without(instance, node, pod) (istio_response_bytes_sum)
+
+        - record: workload:istio_response_bytes_bucket
+          expr: |
+            sum without(instance, node, pod) (istio_response_bytes_bucket)
+
+        - record: workload:istio_tcp_sent_bytes_total
+          expr: |
+            sum without(instance, node, pod) (istio_tcp_sent_bytes_total)
+
+        - record: workload:istio_tcp_received_bytes_total
+          expr: |
+            sum without(instance, node, pod) (istio_tcp_received_bytes_total)
+
+        - record: workload:istio_tcp_connections_opened_total
+          expr: |
+            sum without(instance, node, pod) (istio_tcp_connections_opened_total)
+
+        - record: workload:istio_tcp_connections_closed_total
+          expr: |
+            sum without(instance, node, pod) (istio_tcp_connections_closed_total)
+
+    # The following alerts can be tested via the echoserver with the following commands:
+    #   - while :; do curl -o /dev/null -s -w 'Total: %{time_total}s | Status: %{http_code}\n' 'https://echoserver-http.homelab.ricoberger.dev/status?status=random'; sleep 1; done
+    #   - while :; do curl -o /dev/null -s -w 'Total: %{time_total}s | Status: %{http_code}\n' 'https://echoserver-http.homelab.ricoberger.dev/timeout?timeout=2s'; sleep 1; done
+    - name: istio-alerts
+      rules:
+        - alert: IstioHigh4xxErrorRate
+          expr: |
+            sum(rate(istio_requests_total{response_code=~"4.*"}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) / sum(rate(istio_requests_total{}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) * 100 > 5
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: |
+              Istio high 4xx error rate of {{ $value }}% for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}
+
+        - alert: IstioHigh5xxErrorRate
+          expr: |
+            sum(rate(istio_requests_total{response_code=~"5.*"}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) / sum(rate(istio_requests_total{}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) * 100 > 5
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            summary: |
+              Istio high 5xx error rate of {{ $value }}% for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}
+
+        - alert: IstioLatency99Percentile
+          expr: |
+            histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload, le)) > 1000
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: |
+              Istio 1% of the requests are slower than 1000ms for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}

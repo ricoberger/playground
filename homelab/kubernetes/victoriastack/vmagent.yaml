@@ -1,0 +1,318 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vmagent
+  namespace: victoriastack
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vmagent
+rules:
+  - apiGroups: ["", "networking.k8s.io", "extensions", "discovery.k8s.io"]
+    resources:
+      - nodes
+      - nodes/metrics
+      - services
+      - endpoints
+      - endpointslices
+      - pods
+      - ingresses
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - configmaps
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics", "/metrics/resources", "/metrics/slis"]
+    verbs: ["get"]
+  - apiGroups:
+      - route.openshift.io
+      - image.openshift.io
+    resources:
+      - routers/metrics
+      - registry/metrics
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vmagent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vmagent
+subjects:
+  - kind: ServiceAccount
+    name: vmagent
+    namespace: victoriastack
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAgent
+metadata:
+  name: vmagent
+  namespace: victoriastack
+spec:
+  extraArgs:
+    promscrape.kubernetesSDCheckInterval: 5s
+    promscrape.kubernetes.useHTTP2Client: "true"
+    promscrape.maxScrapeSize: "83886080"
+    promscrape.suppressScrapeErrors: "true"
+  logFormat: json
+  logLevel: INFO
+  podDisruptionBudget:
+    maxUnavailable: 1
+  podMetadata:
+    labels:
+      app: vmagent
+  remoteWrite:
+    - url: http://vminsert-vmcluster.victoriastack.svc.cluster.local:8480/insert/0/prometheus
+  replicaCount: 1
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  selectAllByDefault: true
+  serviceAccountName: vmagent
+  shardCount: 1
+  statefulMode: true
+  statefulStorage:
+    volumeClaimTemplate:
+      metadata:
+        labels:
+          app: vmagent
+      spec:
+        resources:
+          requests:
+            storage: 1Gi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: vmagent
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMNodeScrape
+metadata:
+  name: cadvisor
+  namespace: victoriastack
+spec:
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  honorLabels: true
+  honorTimestamps: false
+  interval: 30s
+  metricRelabelConfigs:
+    - action: labeldrop
+      regex: (uid)
+    - action: labeldrop
+      regex: (id|name)
+    - action: drop
+      regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+      source_labels:
+        - __name__
+  path: /metrics/cadvisor
+  relabelConfigs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+    - sourceLabels:
+        - __metrics_path__
+      targetLabel: metrics_path
+    - replacement: kubelet
+      targetLabel: job
+  scheme: https
+  scrapeTimeout: 5s
+  selector: {}
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecureSkipVerify: true
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMNodeScrape
+metadata:
+  name: kubelet
+  namespace: victoriastack
+spec:
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  honorLabels: true
+  honorTimestamps: false
+  interval: 30s
+  metricRelabelConfigs:
+    - action: labeldrop
+      regex: (uid)
+    - action: labeldrop
+      regex: (id|name)
+    - action: drop
+      regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+      source_labels:
+        - __name__
+  relabelConfigs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+    - sourceLabels:
+        - __metrics_path__
+      targetLabel: metrics_path
+    - replacement: kubelet
+      targetLabel: job
+  scheme: https
+  scrapeTimeout: 5s
+  selector: {}
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecureSkipVerify: true
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMNodeScrape
+metadata:
+  name: probes
+  namespace: victoriastack
+spec:
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  honorLabels: true
+  honorTimestamps: false
+  interval: 30s
+  metricRelabelConfigs:
+    - action: labeldrop
+      regex: (uid)
+    - action: labeldrop
+      regex: (id|name)
+    - action: drop
+      regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+      source_labels:
+        - __name__
+  path: /metrics/probes
+  relabelConfigs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+    - sourceLabels:
+        - __metrics_path__
+      targetLabel: metrics_path
+    - replacement: kubelet
+      targetLabel: job
+  scheme: https
+  scrapeTimeout: 5s
+  selector: {}
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecureSkipVerify: true
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMNodeScrape
+metadata:
+  name: resources
+  namespace: victoriastack
+spec:
+  bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+  honorLabels: true
+  honorTimestamps: false
+  interval: 30s
+  metricRelabelConfigs:
+    - action: labeldrop
+      regex: (uid)
+    - action: labeldrop
+      regex: (id|name)
+    - action: drop
+      regex: (rest_client_request_duration_seconds_bucket|rest_client_request_duration_seconds_sum|rest_client_request_duration_seconds_count)
+      source_labels:
+        - __name__
+  path: /metrics/resource
+  relabelConfigs:
+    - action: labelmap
+      regex: __meta_kubernetes_node_label_(.+)
+    - sourceLabels:
+        - __metrics_path__
+      targetLabel: metrics_path
+    - replacement: kubelet
+      targetLabel: job
+  scheme: https
+  scrapeTimeout: 5s
+  selector: {}
+  tlsConfig:
+    caFile: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    insecureSkipVerify: true
+
+---
+# See: https://docs.victoriametrics.com/operator/integrations/prometheus/#auto-discovery-for-prometheusio-annotations
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: pod-discovery
+  namespace: victoriastack
+spec:
+  jobLabel: pod-discovery
+  podMetricsEndpoints:
+    - relabelConfigs:
+        - action: drop
+          source_labels: [__meta_kubernetes_pod_container_init]
+          regex: "true"
+        - action: keep_if_equal
+          source_labels:
+            [
+              __meta_kubernetes_pod_annotation_prometheus_io_port,
+              __meta_kubernetes_pod_container_port_number,
+            ]
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+          action: keep
+          regex: "true"
+        - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          action: replace
+          target_label: node
+  namespaceSelector:
+    any: true
+
+---
+# See: https://docs.victoriametrics.com/operator/integrations/prometheus/#auto-discovery-for-prometheusio-annotations
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: service-discovery
+  namespace: victoriastack
+spec:
+  jobLabel: service-discovery
+  endpoints:
+    - relabelConfigs:
+        - action: drop
+          source_labels: [__meta_kubernetes_pod_container_init]
+          regex: "true"
+        - action: keep_if_equal
+          source_labels:
+            [
+              __meta_kubernetes_service_annotation_prometheus_io_port,
+              __meta_kubernetes_pod_container_port_number,
+            ]
+        - source_labels:
+            [__meta_kubernetes_service_annotation_prometheus_io_scrape]
+          action: keep
+          regex: "true"
+        - source_labels:
+            [__meta_kubernetes_service_annotation_prometheus_io_path]
+          action: replace
+          target_label: __metrics_path__
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          action: replace
+          target_label: node
+  namespaceSelector:
+    any: true
