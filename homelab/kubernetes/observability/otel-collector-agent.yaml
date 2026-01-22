@@ -195,10 +195,12 @@ data:
             conditions:
               - IsMap(resource.attributes) and resource.attributes["k8s.container.name"] == "istio-proxy"
             statements:
-              - set(attributes["trace_id"], Substring(attributes["traceparent"], 3, 32))
-              - set(attributes["span_id"], Substring(attributes["traceparent"], 36, 16))
-              - set(trace_id.string, attributes["trace_id"])
-              - set(span_id.string, attributes["parent_id"])
+              - set(attributes["trace-id"], Substring(attributes["traceparent"], 3, 32))
+              - set(attributes["span-id"], Substring(attributes["traceparent"], 36, 16))
+              - set(trace_id.string, attributes["trace-id"])
+              - set(span_id.string, attributes["span-id"])
+              - delete_key(attributes, "trace-id")
+              - delete_key(attributes, "span-id")
       transform/traces:
         error_mode: ignore
         trace_statements:
