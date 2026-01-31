@@ -4,7 +4,7 @@ RUN apk --update add ca-certificates
 FROM golang:1.25.5 AS build-stage
 WORKDIR /build
 COPY ./manifest.yaml manifest.yaml
-RUN --mount=type=cache,target=/root/.cache/go-build GO111MODULE=on go install go.opentelemetry.io/collector/cmd/builder@v0.142.0
+RUN --mount=type=cache,target=/root/.cache/go-build GO111MODULE=on go install go.opentelemetry.io/collector/cmd/builder@v0.144.0
 RUN --mount=type=cache,target=/root/.cache/go-build builder --config manifest.yaml
 
 FROM gcr.io/distroless/base:latest
