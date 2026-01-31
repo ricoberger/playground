@@ -1,0 +1,102 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMCluster
+metadata:
+  name: vmcluster
+  namespace: victoriastack
+spec:
+  retentionPeriod: 5d
+  replicationFactor: 1
+
+  vminsert:
+    extraArgs:
+      maxLabelsPerTimeseries: "50"
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vminsert
+    replicaCount: 1
+    securityContext:
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: ScheduleAnyway
+        labelSelector:
+          matchLabels:
+            app: vminsert
+
+  vmselect:
+    cacheMountPath: "/select-cache"
+    logFormat: json
+    logLevel: INFO
+    extraArgs:
+      search.maxSamplesPerSeries: "300000000"
+      search.maxQueryLen: "80000"
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vmselect
+    replicaCount: 1
+    securityContext:
+      fsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    storage:
+      volumeClaimTemplate:
+        metadata:
+          labels:
+            app: vmselect
+        spec:
+          resources:
+            requests:
+              storage: 1Gi
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: vmselect
+
+  vmstorage:
+    logFormat: json
+    logLevel: INFO
+    podDisruptionBudget:
+      maxUnavailable: 1
+    podMetadata:
+      labels:
+        app: vmstorage
+    replicaCount: 1
+    securityContext:
+      fsGroup: 65534
+      runAsNonRoot: true
+      runAsUser: 65534
+      seccompProfile:
+        type: RuntimeDefault
+    storage:
+      volumeClaimTemplate:
+        metadata:
+          labels:
+            app: vmstorage
+        spec:
+          resources:
+            requests:
+              storage: 10Gi
+    storageDataPath: "/vm-data"
+    topologySpreadConstraints:
+      - maxSkew: 1
+        topologyKey: kubernetes.io/hostname
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            app: vmstorage

@@ -8,3 +8,4 @@ resources:
   - gateway-api.yaml
   - grafana.yaml
   - istio-base.yaml
+  - victoriastack.yaml

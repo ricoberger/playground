@@ -1,0 +1,24 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: victoriametrics
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  datasource:
+    name: VictoriaMetrics
+    type: prometheus
+    uid: victoriametrics
+    access: proxy
+    isDefault: false
+    orgId: 1
+    editable: false
+    url: http://vmselect-vmcluster.victoriastack.svc.cluster.local:8481/select/0/prometheus
+    jsonData:
+      prometheusType: Prometheus
+      prometheusVersion: 2.50.1
+      customQueryParameters: max_source_resolution=auto

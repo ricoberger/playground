@@ -1,0 +1,52 @@
+---
+apiVersion: grafana.integreatly.org/v1beta1
+kind: GrafanaDatasource
+metadata:
+  name: victoriatraces
+  namespace: observability
+  labels:
+    kustomize.toolkit.fluxcd.io/substitute: disabled
+spec:
+  allowCrossNamespaceImport: true
+  instanceSelector: {}
+  datasource:
+    name: VictoriaTraces
+    type: jaeger
+    uid: victoriatraces
+    access: proxy
+    isDefault: false
+    orgId: 1
+    editable: false
+    url: http://vtselect-vtcluster.victoriastack.svc.cluster.local:10471/select/jaeger
+    jsonData:
+      tracesToLogsV2:
+        datasourceUid: victorialogs
+        spanStartTimeShift: -1h
+        spanEndTimeShift: 1h
+        filterByTraceID: true
+        filterBySpanID: true
+        customQuery: true
+        query: 'trace_id:="${__trace.traceId}"'
+      tracesToMetrics:
+        datasourceUid: victoriametrics
+        queries:
+          - name: Requests
+            query: |
+              sum(rate(traces.span.metrics.calls{$__tags, span.name="${__span.name}"}[5m])) by (service.name,service.namespace,span.name)
+          - name: Errors
+            query: |
+              sum(rate(traces.span.metrics.calls{$__tags, span.name="${__span.name}",status.code="STATUS_CODE_ERROR"}[5m])) by (service.name,service.namespace,span.name)
+          - name: Latency
+            query: |
+              histogram_quantile(0.99, sum(rate(traces.span.metrics.duration_bucket{$__tags, span.name="${__span.name}"}[5m])) by (le,service.name,service.namespace,span.name))
+        spanEndTimeShift: 1h
+        spanStartTimeShift: "-1h"
+        tags:
+          - key: service.name_original
+            value: service.name
+          - key: service.namespace
+            value: service.namespace
+      nodeGraph:
+        enabled: true
+      spanBar:
+        type: "None"
