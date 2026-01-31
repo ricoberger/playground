@@ -100,25 +100,6 @@ data:
         endpoint: 0.0.0.0:9411
 
     exporters:
-      clickhouse:
-        endpoint: clickhouse://clickhouse-clickhouse.observability.svc.cluster.local:9000?dial_timeout=10s&compress=lz4
-        database: observability
-        username: '${env:CLICKHOUSE_USERNAME}'
-        password: '${env:CLICKHOUSE_PASSWORD}'
-        create_schema: false
-        async_insert: true
-        logs_table_name: otel_logs
-        traces_table_name: otel_traces
-        timeout: 5s
-        retry_on_failure:
-          enabled: true
-          initial_interval: 5s
-          max_interval: 30s
-          max_elapsed_time: 300s
-      otlphttp/prometheus:
-        endpoint: http://prometheus:9090/api/v1/otlp
-        tls:
-          insecure: true
       otlphttp/victoriastack:
         compression: gzip
         encoding: proto
@@ -263,7 +244,6 @@ data:
             - resourcedetection
             - transform/logs
           exporters:
-            - clickhouse
             - otlphttp/victoriastack
         metrics:
           receivers:
@@ -276,7 +256,6 @@ data:
             - resourcedetection
             - deltatocumulative
           exporters:
-            - otlphttp/prometheus
             - otlphttp/victoriastack
         traces:
           receivers:
@@ -290,7 +269,6 @@ data:
             - resourcedetection
             - transform/traces
           exporters:
-            - clickhouse
             - otlphttp/victoriastack
             - spanmetrics
 
@@ -365,7 +343,7 @@ spec:
         - name: staffbase-registries
       containers:
         - name: otel-collector-agent
-          image: registry.homelab.ricoberger.dev:5555/otel-collector-agent:v0.142.0
+          image: registry.homelab.ricoberger.dev:5555/otel-collector-agent:v0.144.0
           imagePullPolicy: Always
           args:
             - --config=/otel-collector/config/config.yaml
@@ -405,13 +383,6 @@ spec:
             # 75% of the configured memory limit
             - name: GOMEMLIMIT
               value: 384MiB
-            - name: CLICKHOUSE_USERNAME
-              value: observability
-            - name: CLICKHOUSE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  name: clickhouse
-                  key: OBSERVABILITY_PASSWORD
           resources:
             limits:
               memory: 512Mi

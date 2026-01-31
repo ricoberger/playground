@@ -14,7 +14,7 @@ spec:
     type: prometheus
     uid: victoriametrics
     access: proxy
-    isDefault: false
+    isDefault: true
     orgId: 1
     editable: false
     url: http://vmselect-vmcluster.victoriastack.svc.cluster.local:8481/select/0/prometheus
