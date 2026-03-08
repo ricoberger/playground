@@ -6,6 +6,7 @@ resources:
   - grafana/folders
   - grafana/users
   - grafana-operator.yaml
+  - grafana-ricoberger-kubernetes-app.yaml
   - grafana.yaml
   - kiali.yaml
   - namespace.yaml

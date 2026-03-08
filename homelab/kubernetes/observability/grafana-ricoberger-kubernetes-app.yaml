@@ -1,0 +1,38 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-ricoberger-kubernetes-app
+  namespace: observability
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: grafana-ricoberger-kubernetes-app
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana-ricoberger-kubernetes-app
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana-ricoberger-kubernetes-app
+  template:
+    metadata:
+      labels:
+        app: grafana-ricoberger-kubernetes-app
+    spec:
+      containers:
+        - name: grafana-ricoberger-kubernetes-app
+          image: ghcr.io/ricoberger/grafana-kubernetes-plugin:main
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8080
