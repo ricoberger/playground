@@ -3,3 +3,6 @@ kind: Kustomization
 resources:
   - echoserver.yaml
   - istio.yaml
+  - kube-state-metrics.yaml
+  - kubernetes.yaml
+  - node-exporter.yaml

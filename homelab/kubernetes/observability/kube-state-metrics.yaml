@@ -1,0 +1,47 @@
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata:
+  name: kube-state-metrics
+  namespace: observability
+spec:
+  releaseName: kube-state-metrics
+  chart:
+    spec:
+      chart: kube-state-metrics
+      version: 7.2.0
+      sourceRef:
+        kind: HelmRepository
+        name: prometheus-community
+        namespace: flux-system
+  driftDetection:
+    mode: enabled
+  install:
+    crds: Skip
+  upgrade:
+    crds: Skip
+  interval: 15m
+  timeout: 10m
+  values:
+    prometheusScrape: false
+    replicas: 1
+    customLabels:
+      app: kube-state-metrics
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMServiceScrape
+metadata:
+  name: kube-state-metrics
+  namespace: observability
+spec:
+  endpoints:
+    - attach_metadata: {}
+      honorLabels: true
+      port: http
+  jobLabel: app.kubernetes.io/name
+  namespaceSelector: {}
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: kube-state-metrics
+      app.kubernetes.io/name: kube-state-metrics
