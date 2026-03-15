@@ -66,6 +66,17 @@ spec:
 apiVersion: source.toolkit.fluxcd.io/v1
 kind: HelmRepository
 metadata:
+  name: prometheus-community
+  namespace: flux-system
+spec:
+  interval: 15m
+  type: oci
+  url: oci://ghcr.io/prometheus-community/charts
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata:
   name: ricoberger
   namespace: flux-system
 spec:

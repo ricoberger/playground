@@ -9,5 +9,6 @@ resources:
   - grafana-ricoberger-kubernetes-app.yaml
   - grafana.yaml
   - kiali.yaml
+  - kube-state-metrics.yaml
   - namespace.yaml
   - otel-collector-agent.yaml
