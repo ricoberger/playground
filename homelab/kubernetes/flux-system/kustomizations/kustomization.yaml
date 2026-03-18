@@ -8,6 +8,7 @@ resources:
   - echoserver.yaml
   - external-dns.yaml
   - flux-system.yaml
+  - istio-egress.yaml
   - istio-ingress.yaml
   - istio-system.yaml
   - observability.yaml
