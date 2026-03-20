@@ -4,6 +4,8 @@ kind: ServiceEntry
 metadata:
   name: httpbin.org
   namespace: istio-egress
+  # labels:
+  #   istio.io/use-waypoint: waypoint
 spec:
   hosts:
     - httpbin.org

@@ -28,3 +28,12 @@ spec:
               done
           image: alpine/curl:8.17.0
           imagePullPolicy: IfNotPresent
+          # volumeMounts:
+          #   - name: istio-egress-ca-bundle
+          #     mountPath: /etc/ssl/certs/trust-bundle.crt
+          #     subPath: trust-bundle.crt
+          #     readOnly: true
+      # volumes:
+      #   - name: istio-egress-ca-bundle
+      #     configMap:
+      #       name: istio-egress-ca-bundle

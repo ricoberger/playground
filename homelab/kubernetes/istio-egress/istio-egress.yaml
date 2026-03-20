@@ -4,8 +4,10 @@ kind: Gateway
 metadata:
   name: istio-egress
   namespace: istio-egress
-  labels:
-    istio.io/waypoint-for: service
+  # labels:
+  #   istio.io/waypoint-for: service
+  # annotations:
+  #   networking.istio.io/service-type: ClusterIP
 spec:
   gatewayClassName: istio-waypoint
   listeners:
@@ -15,3 +17,22 @@ spec:
       allowedRoutes:
         namespaces:
           from: Same
+
+---
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: istio-egress-server-cert
+  namespace: istio-egress
+spec:
+  commonName: istio-egress-server-cert
+  secretName: istio-egress-server-cert-secret
+  privateKey:
+    algorithm: RSA
+    size: 2048
+  dnsNames:
+    - httpbin.org
+  issuerRef:
+    name: istio-egress-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
