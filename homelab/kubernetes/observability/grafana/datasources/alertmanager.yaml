@@ -20,4 +20,4 @@ spec:
     url: http://vmalertmanager-vmalertmanager.victoriastack.svc.cluster.local:9093
     jsonData:
       implementation: prometheus
-      handleGrafanaManagedAlerts: true
+      handleGrafanaManagedAlerts: false
