@@ -4,3 +4,4 @@ resources:
   - cert-manager.yaml
   - clusterissuer.yaml
   - namespace.yaml
+  - trust-manager.yaml
