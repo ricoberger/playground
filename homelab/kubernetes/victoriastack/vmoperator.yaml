@@ -92,7 +92,6 @@ rules:
       - configmaps/status
       - pods
       - nodes
-      - nodes/proxy
       - nodes/metrics
       - namespaces
     verbs:
@@ -158,6 +157,12 @@ rules:
       - autoscaling
     resources:
       - horizontalpodautoscalers
+    verbs:
+      - "*"
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
     verbs:
       - "*"
   - apiGroups:
@@ -251,6 +256,9 @@ rules:
       - vmanomalies
       - vmanomalies/finalizers
       - vmanomalies/status
+      - vmdistributed
+      - vmdistributed/finalizers
+      - vmdistributed/status
     verbs:
       - "*"
   - apiGroups:
@@ -343,7 +351,7 @@ spec:
           env:
             - name: WATCH_NAMESPACE
               value: ""
-          image: docker.io/victoriametrics/operator:v0.66.1
+          image: docker.io/victoriametrics/operator:v0.68.3
           livenessProbe:
             httpGet:
               path: /health

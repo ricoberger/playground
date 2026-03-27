@@ -1,0 +1,50 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAuth
+metadata:
+  name: vmauth
+  namespace: victoriastack
+spec:
+  logFormat: json
+  logLevel: INFO
+  podDisruptionBudget:
+    maxUnavailable: 1
+  podMetadata:
+    labels:
+      app: vmauth
+  replicaCount: 1
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: vmauth
+  unauthorizedUserAccessSpec:
+    targetRefs:
+      - crd:
+          kind: VMAlert
+          name: vmalert
+          namespace: victoriastack
+        paths:
+          - "/select/0/prometheus/api/v1/rules"
+          - "/select/0/prometheus/api/v1/alerts"
+        drop_src_path_prefix_parts: 3
+      - crd:
+          kind: VMCluster/vmselect
+          name: vmcluster
+          namespace: victoriastack
+        paths:
+          - "/select/0/prometheus/api/v1/query"
+          - "/select/0/prometheus/api/v1/query_range"
+          - "/select/0/prometheus/api/v1/series"
+          - "/select/0/prometheus/api/v1/labels"
+          - "/select/0/prometheus/api/v1/label/.+/values"
+          - "/select/0/prometheus/api/v1/status/buildinfo"
+          - "/select/.*"
