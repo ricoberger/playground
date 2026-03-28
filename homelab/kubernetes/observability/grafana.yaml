@@ -136,6 +136,8 @@ spec:
                 - mountPath: /etc/grafana/provisioning/plugins/apps.yaml
                   name: grafana-provisioning
                   subPath: apps.yaml
+            - name: image-renderer
+              image: "grafana/grafana-image-renderer:v5.7.3"
             - name: kubernetes-plugin
               image: alpine/curl:8.14.1
               command:
@@ -201,7 +203,7 @@ spec:
   config:
     log:
       mode: console
-      level: warn
+      level: debug
     log.console:
       format: json
     users:
@@ -212,6 +214,10 @@ spec:
       root_url: https://grafana.homelab.ricoberger.dev
     unified_alerting:
       enabled: "true"
+    unified_alerting.screenshots:
+      capture: "true"
+    rendering:
+      server_url: http://localhost:8081/render
     plugins:
       plugin_admin_enabled: "false"
       allow_loading_unsigned_plugins: ricoberger-istio-datasource,ricoberger-kubernetes-app,ricoberger-kubernetes-datasource

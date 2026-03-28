@@ -17,7 +17,8 @@ spec:
     isDefault: true
     orgId: 1
     editable: false
-    url: http://vmselect-vmcluster.victoriastack.svc.cluster.local:8481/select/0/prometheus
+    # url: http://vmselect-vmcluster.victoriastack.svc.cluster.local:8481/select/0/prometheus
+    url: http://vmauth-vmauth.victoriastack.svc.cluster.local:8427/select/0/prometheus
     jsonData:
       prometheusType: Prometheus
       prometheusVersion: 2.50.1
