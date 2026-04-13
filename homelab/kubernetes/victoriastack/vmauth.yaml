@@ -36,6 +36,19 @@ spec:
           - "/select/0/prometheus/api/v1/rules"
           - "/select/0/prometheus/api/v1/alerts"
         drop_src_path_prefix_parts: 3
+      # - paths:
+      #     - "/select/0/prometheus/api/v1/write"
+      #   drop_src_path_prefix_parts: 6
+      #   static:
+      #     url: "http://vminsert-vmcluster.victoriastack.svc.cluster.local:8480/insert/0/prometheus"
+      - crd:
+          kind: VMCluster/vminsert
+          name: vmcluster
+          namespace: victoriastack
+        paths:
+          - "/select/0/prometheus/api/v1/write"
+        drop_src_path_prefix_parts: 6
+        target_path_suffix: "/insert/0/prometheus"
       - crd:
           kind: VMCluster/vmselect
           name: vmcluster

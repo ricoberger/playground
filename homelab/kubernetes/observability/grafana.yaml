@@ -216,6 +216,10 @@ spec:
       enabled: "true"
     unified_alerting.screenshots:
       capture: "true"
+    unified_alerting.state_history:
+      enabled: "true"
+      backend: prometheus
+      prometheus_target_datasource_uid: victoriametrics
     rendering:
       server_url: http://localhost:8081/render
     plugins:
