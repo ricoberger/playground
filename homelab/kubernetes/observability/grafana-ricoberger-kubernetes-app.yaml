@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
         - name: grafana-ricoberger-kubernetes-app
-          image: registry.homelab.ricoberger.dev:5555/ricoberger-kubernetes-app:0.5.3
+          image: registry.homelab.ricoberger.dev:5555/ricoberger-kubernetes-app:0.5.5
           imagePullPolicy: Always
           ports:
             - name: http
