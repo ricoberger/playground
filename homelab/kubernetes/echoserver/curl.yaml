@@ -26,5 +26,5 @@ spec:
               while true; do
                 sleep 10;
               done
-          image: alpine/curl:8.17.0
+          image: alpine/curl:8.23.0
           imagePullPolicy: IfNotPresent

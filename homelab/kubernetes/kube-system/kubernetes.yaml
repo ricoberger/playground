@@ -1,0 +1,13 @@
+---
+apiVersion: externaldns.k8s.io/v1alpha1
+kind: DNSEndpoint
+metadata:
+  name: kubernetes
+  namespace: external-dns
+spec:
+  endpoints:
+    - dnsName: kubernetes.homelab.ricoberger.dev
+      recordTTL: 300
+      recordType: A
+      targets:
+        - ${ipaddress}

@@ -63,7 +63,7 @@ spec:
           }
         ]
       },
-      "description": "Istio Performance Dashboard version 1.28.1",
+      "description": "Istio Performance Dashboard version 1.32.0",
       "editable": true,
       "fiscalYearStartMonth": 0,
       "graphTooltip": 0,

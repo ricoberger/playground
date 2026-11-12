@@ -106,3 +106,17 @@ spec:
           requestRedirect:
             scheme: https
             statusCode: 301
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: istio-ingress
+  namespace: istio-ingress
+spec:
+  podMetricsEndpoints:
+    - port: metrics
+      path: /stats/prometheus
+  selector:
+    matchLabels:
+      gateway.networking.k8s.io/gateway-name: istio-ingress

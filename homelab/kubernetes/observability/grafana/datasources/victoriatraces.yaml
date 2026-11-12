@@ -11,20 +11,20 @@ spec:
   instanceSelector: {}
   datasource:
     name: VictoriaTraces
-    type: jaeger
+    type: tempo
     uid: victoriatraces
     access: proxy
     isDefault: false
     orgId: 1
     editable: false
-    url: http://vtselect-vtcluster.victoriastack.svc.cluster.local:10471/select/jaeger
+    url: http://vtselect-vtcluster.observability.svc.cluster.local:10471/select/tempo
     jsonData:
       tracesToLogsV2:
         datasourceUid: victorialogs
         spanStartTimeShift: -1h
         spanEndTimeShift: 1h
-        filterByTraceID: true
-        filterBySpanID: true
+        filterByTraceID: false
+        filterBySpanID: false
         customQuery: true
         query: 'trace_id:="${__trace.traceId}"'
       tracesToMetrics:
@@ -35,18 +35,29 @@ spec:
               sum(rate(traces.span.metrics.calls{$__tags, span.name="${__span.name}"}[5m])) by (service.name,service.namespace,span.name)
           - name: Errors
             query: |
-              sum(rate(traces.span.metrics.calls{$__tags, span.name="${__span.name}",status.code="STATUS_CODE_ERROR"}[5m])) by (service.name,service.namespace,span.name)
+              sum(rate(traces.span.metrics.calls{$__tags, span.name="${__span.name}", status.code="STATUS_CODE_ERROR"}[5m])) by (service.name,service.namespace,span.name)
           - name: Latency
             query: |
               histogram_quantile(0.99, sum(rate(traces.span.metrics.duration_bucket{$__tags, span.name="${__span.name}"}[5m])) by (le,service.name,service.namespace,span.name))
         spanEndTimeShift: 1h
         spanStartTimeShift: "-1h"
         tags:
-          - key: service.name_original
+          - key: service.name
             value: service.name
           - key: service.namespace
             value: service.namespace
+      tracesToProfiles:
+        datasourceUid: pyroscope
+        profileTypeId: process_cpu:cpu:nanoseconds:cpu:nanoseconds
+        tags:
+          - key: service.name
+            value: service_name
+        spanEndTimeShift: 1h
+        spanStartTimeShift: "-1h"
       nodeGraph:
         enabled: true
       spanBar:
         type: "None"
+      streamingEnabled:
+        search: false
+        metrics: false

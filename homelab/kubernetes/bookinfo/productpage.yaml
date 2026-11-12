@@ -120,4 +120,4 @@ spec:
       recordTTL: 300
       recordType: A
       targets:
-        - 192.168.2.143
+        - ${ipaddress}

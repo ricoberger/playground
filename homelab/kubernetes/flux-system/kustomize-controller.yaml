@@ -48,9 +48,6 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: kustomize-controller
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
     spec:
       containers:
         - args:
@@ -65,17 +62,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: GOMAXPROCS
-              valueFrom:
-                resourceFieldRef:
-                  containerName: manager
-                  resource: requests.cpu
             - name: GOMEMLIMIT
               valueFrom:
                 resourceFieldRef:
                   containerName: manager
                   resource: limits.memory
-          image: ghcr.io/fluxcd/kustomize-controller:v1.7.3
+          image: ghcr.io/fluxcd/kustomize-controller:v1.10.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -126,3 +118,17 @@ spec:
       volumes:
         - emptyDir: {}
           name: tmp
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: kustomize-controller
+  namespace: flux-system
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: kustomize-controller
+  podMetricsEndpoints:
+    - port: http-prom

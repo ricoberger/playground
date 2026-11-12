@@ -47,7 +47,7 @@ spec:
           "version": ""
         }
       ],
-      "description": "Istio Ztunnel Dashboard version 1.28.1",
+      "description": "Istio Ztunnel Dashboard version 1.32.0",
       "graphTooltip": 1,
       "panels": [
         {

@@ -17,7 +17,7 @@ spec:
     isDefault: false
     orgId: 1
     editable: false
-    url: http://vmalertmanager-vmalertmanager.victoriastack.svc.cluster.local:9093
+    url: http://vmalertmanager-vmalertmanager.observability.svc.cluster.local:9093
     jsonData:
       implementation: prometheus
       handleGrafanaManagedAlerts: false

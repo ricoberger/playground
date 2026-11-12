@@ -48,9 +48,6 @@ spec:
     metadata:
       labels:
         app.kubernetes.io/name: helm-controller
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8080"
     spec:
       containers:
         - args:
@@ -64,17 +61,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - name: GOMAXPROCS
-              valueFrom:
-                resourceFieldRef:
-                  containerName: manager
-                  resource: requests.cpu
             - name: GOMEMLIMIT
               valueFrom:
                 resourceFieldRef:
                   containerName: manager
                   resource: limits.memory
-          image: ghcr.io/fluxcd/helm-controller:v1.4.5
+          image: ghcr.io/fluxcd/helm-controller:v1.7.1
           imagePullPolicy: IfNotPresent
           livenessProbe:
             httpGet:
@@ -94,7 +86,7 @@ spec:
               port: healthz
           resources:
             limits:
-              memory: 64Mi
+              memory: 512Mi
             requests:
               cpu: 10m
               memory: 64Mi
@@ -125,3 +117,17 @@ spec:
       volumes:
         - emptyDir: {}
           name: tmp
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: helm-controller
+  namespace: flux-system
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: helm-controller
+  podMetricsEndpoints:
+    - port: http-prom

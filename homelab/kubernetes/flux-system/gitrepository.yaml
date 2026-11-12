@@ -8,6 +8,4 @@ spec:
   interval: 15m
   ref:
     branch: dev
-  secretRef:
-    name: deploy-key
   url: https://github.com/ricoberger/playground

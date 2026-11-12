@@ -7,6 +7,10 @@ metadata:
 spec:
   interval: 15m
   path: ./homelab/kubernetes/istio-system
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
   prune: true
   sourceRef:
     kind: GitRepository
