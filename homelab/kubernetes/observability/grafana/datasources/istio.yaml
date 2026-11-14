@@ -18,7 +18,7 @@ spec:
     orgId: 1
     editable: false
     jsonData:
-      prometheusUrl: http://prometheus.observability.svc.cluster.local:9090
+      prometheusUrl: http://vmauth-vmauth.observability.svc.cluster.local:8427/select/0/prometheus
       prometheusAuthMethod: none
       istioWarningThreshold: 0
       istioErrorThreshold: 5

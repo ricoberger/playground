@@ -38,6 +38,12 @@ rules:
     verbs:
       - "*"
   - apiGroups:
+      - source.extensions.fluxcd.io
+    resources:
+      - "*"
+    verbs:
+      - "*"
+  - apiGroups:
       - ""
     resources:
       - namespaces
@@ -87,6 +93,12 @@ rules:
       - update
       - patch
       - delete
+  - apiGroups:
+      - authorization.k8s.io
+    resources:
+      - subjectaccessreviews
+    verbs:
+      - create
   - nonResourceURLs:
       - /livez/ping
     verbs:

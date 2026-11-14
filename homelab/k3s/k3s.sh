@@ -27,7 +27,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-server 2>/dev/null ||
     --privileged \
     --restart always \
     --network homelab \
-    -e K3S_TOKEN=bfz82BRQankBv7bx99H7Maa68wgBUd4f \
+    -e K3S_TOKEN=$HOMELAB_K3S_TOKEN \
     -e K3S_KUBECONFIG_OUTPUT=/output/kubeconfig.yaml \
     -e K3S_KUBECONFIG_MODE=666 \
     -e K3S_NODE_NAME=homelab-k3s-server \
@@ -40,7 +40,7 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-server 2>/dev/null ||
     -p 443:30443 \
     --entrypoint /entrypoint.sh \
     --name homelab-k3s-server \
-    rancher/k3s:v1.34.2-k3s1 server --tls-san kubernetes.homelab.ricoberger.dev --disable servicelb --disable traefik
+    rancher/k3s:v1.37.2-k3s1 server --tls-san kubernetes.homelab.ricoberger.dev --disable-helm-controller --disable servicelb --disable traefik
 fi
 
 if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-1 2>/dev/null || true)" != 'true' ]; then
@@ -53,14 +53,14 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-1 2>/dev/null |
     --restart always \
     --network homelab \
     -e K3S_URL=https://homelab-k3s-server:6443 \
-    -e K3S_TOKEN=bfz82BRQankBv7bx99H7Maa68wgBUd4f \
+    -e K3S_TOKEN=$HOMELAB_K3S_TOKEN \
     -e K3S_NODE_NAME=homelab-k3s-agent-1 \
     -v homelab-k3s-agent-1:/var/lib/rancher/k3s \
     -v $(pwd)/k3s/entrypoint.sh:/entrypoint.sh \
     -v $(pwd)/k3s/registries.yaml:/etc/rancher/k3s/registries.yaml \
     --entrypoint /entrypoint.sh \
     --name homelab-k3s-agent-1 \
-    rancher/k3s:v1.34.2-k3s1 agent
+    rancher/k3s:v1.37.2-k3s1 agent
 fi
 
 if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-2 2>/dev/null || true)" != 'true' ]; then
@@ -73,14 +73,14 @@ if [ "$(docker inspect -f '{{.State.Running}}' homelab-k3s-agent-2 2>/dev/null |
     --restart always \
     --network homelab \
     -e K3S_URL=https://homelab-k3s-server:6443 \
-    -e K3S_TOKEN=bfz82BRQankBv7bx99H7Maa68wgBUd4f \
+    -e K3S_TOKEN=$HOMELAB_K3S_TOKEN \
     -e K3S_NODE_NAME=homelab-k3s-agent-2 \
     -v homelab-k3s-agent-2:/var/lib/rancher/k3s \
     -v $(pwd)/k3s/entrypoint.sh:/entrypoint.sh \
     -v $(pwd)/k3s/registries.yaml:/etc/rancher/k3s/registries.yaml \
     --entrypoint /entrypoint.sh \
     --name homelab-k3s-agent-2 \
-    rancher/k3s:v1.34.2-k3s1 agent
+    rancher/k3s:v1.37.2-k3s1 agent
 fi
 
 if [ "$(docker inspect -f='{{json .NetworkSettings.Networks.homelab}}' homelab-registry)" = 'null' ]; then

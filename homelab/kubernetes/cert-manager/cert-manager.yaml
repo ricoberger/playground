@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: cert-manager
-      version: v1.19.2
+      version: v1.21.3
       sourceRef:
         kind: HelmRepository
         name: jetstack
@@ -145,3 +145,17 @@ spec:
           memory: 64Mi
         limits:
           memory: 64Mi
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: cert-manager
+  namespace: cert-manager
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: cert-manager
+  podMetricsEndpoints:
+    - port: http-metrics

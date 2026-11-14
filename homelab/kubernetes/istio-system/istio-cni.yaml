@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: cni
-      version: 1.28.1
+      version: 1.32.0
       sourceRef:
         kind: HelmRepository
         name: istio
@@ -18,8 +18,8 @@ spec:
     mode: enabled
   interval: 15m
   timeout: 10m
-  # See https://github.com/istio/istio/blob/1.28.1/manifests/helm-profiles/ambient.yaml
-  # See https://github.com/istio/istio/blob/1.28.1/manifests/helm-profiles/platform-k3s.yaml
+  # See https://github.com/istio/istio/blob/1.32.0/manifests/helm-profiles/ambient.yaml
+  # See https://github.com/istio/istio/blob/1.32.0/manifests/helm-profiles/platform-k3s.yaml
   values:
     # CNI-and-platform specific path defaults.
     # These may need to be set to platform-specific values, consult
@@ -52,3 +52,22 @@ spec:
         requests:
           cpu: 10m
           memory: 64Mi
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: istio-cni
+  namespace: istio-system
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: istio-cni
+      k8s-app: istio-cni-node
+  podMetricsEndpoints:
+    - port: metrics
+      relabelConfigs:
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          action: replace
+          target_label: node

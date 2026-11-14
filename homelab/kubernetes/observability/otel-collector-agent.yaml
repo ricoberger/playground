@@ -74,20 +74,33 @@ data:
         operators:
           - id: container_parser
             type: container
+            on_error: send_quiet
+            output: json_parser
           - id: json_parser
             type: json_parser
             on_error: send_quiet
-            severity:
-              parse_from: attributes.level
+            output: time_parser_router
+          - id: time_parser_router
+            type: router
+            default: trace_parser
+            routes:
+              - output: time_parser
+                expr: 'attributes.time != nil'
+          - id: time_parser
+            type: time_parser
+            parse_from: attributes.time
+            layout: '%Y-%m-%dT%H:%M:%S.%LZ'
+            on_error: send_quiet
+            output: trace_parser
           - id: trace_parser
             type: trace_parser
+            on_error: send_quiet
             trace_id:
               parse_from: attributes.trace_id
             span_id:
               parse_from: attributes.span_id
             trace_flags:
               parse_from: attributes.trace_flags
-            on_error: send_quiet
       jaeger:
         protocols:
           grpc:
@@ -100,12 +113,38 @@ data:
         endpoint: 0.0.0.0:9411
 
     exporters:
-      otlphttp/victoriastack:
+      otlphttp/victoriametrics:
         compression: gzip
         encoding: proto
-        metrics_endpoint: http://vminsert-vmcluster.victoriastack.svc.cluster.local:8480/insert/0/opentelemetry/v1/metrics
-        logs_endpoint: http://vlinsert-vlcluster.victoriastack.svc.cluster.local:9481/insert/opentelemetry/v1/logs
-        traces_endpoint: http://vtinsert-vtcluster.victoriastack.svc.cluster.local:10481/insert/opentelemetry/v1/traces
+        metrics_endpoint: http://vminsert-vmcluster.observability.svc.cluster.local:8480/insert/0/opentelemetry/v1/metrics
+        tls:
+          insecure: true
+      otlphttp/victorialogs:
+        compression: gzip
+        encoding: proto
+        logs_endpoint: http://vlinsert-vlcluster.observability.svc.cluster.local:9481/insert/opentelemetry/v1/logs
+        tls:
+          insecure: true
+        headers:
+          VL-Msg-Field: body
+      otlphttp/victorialogs/filelog:
+        compression: gzip
+        encoding: proto
+        logs_endpoint: http://vlinsert-vlcluster.observability.svc.cluster.local:9481/insert/opentelemetry/v1/logs
+        tls:
+          insecure: true
+        headers:
+          VL-Msg-Field: body
+          # Comma-separated list of log field names, which uniquely identify
+          # every log stream.
+          #
+          # Overwrite the default setting which includes all
+          # "resource.attributes" fields.
+          VL-Stream-Fields: "service.name,service.namespace,k8s.namespace.name,k8s.node.name,k8s.pod.name,k8s.pod.uid,k8s.container.name"
+      otlphttp/victoriatraces:
+        compression: gzip
+        encoding: proto
+        traces_endpoint: http://vtinsert-vtcluster.observability.svc.cluster.local:10481/insert/opentelemetry/v1/traces
         tls:
           insecure: true
 
@@ -145,43 +184,59 @@ data:
               - tag_name: app.kubernetes.io/name
                 key_regex: app.kubernetes.io\/name
                 from: pod
-      resourcedetection:
-        detectors:
-          - env
-          - system
       deltatocumulative:
         max_stale: 5m
-      transform/logs:
+      transform/logs/filelog:
         error_mode: silent
         log_statements:
-          # Set service.name from Kubernetes labels if not already set
+          # Set service.name from Kubernetes labels or the container name if not
+          # already set. The fields are deleted afterwards to avoid sending
+          # redundant information.
           - context: log
             conditions:
-              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.app"] != nil
+              - IsMap(resource.attributes)
             statements:
-              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app"])
-          - context: log
-            conditions:
-              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.k8s-app"] != nil
-            statements:
-              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.k8s-app"])
-          - context: log
-            conditions:
-              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.pod.labels.app.kubernetes.io/name"] != nil
-            statements:
-              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app.kubernetes.io/name"])
-          - context: log
-            conditions:
-              - resource.attributes["service.name"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.container.name"] != nil
-            statements:
-              - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"])
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.labels.app"] != nil
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.k8s-app"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.labels.k8s-app"] != nil
+              - set(resource.attributes["service.name"], resource.attributes["k8s.pod.labels.app.kubernetes.io/name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.pod.labels.app.kubernetes.io/name"] != nil
+              - set(resource.attributes["service.name"], resource.attributes["k8s.container.name"]) where resource.attributes["service.name"] == nil and resource.attributes["k8s.container.name"] != nil
+              - delete_key(resource.attributes, "k8s.pod.labels.app")
+              - delete_key(resource.attributes, "k8s.pod.labels.k8s-app")
+              - delete_key(resource.attributes, "k8s.pod.labels.app.kubernetes.io/name")
           # Set service.namespace from Kubernetes namespace if not already set
           - context: log
             conditions:
-              - resource.attributes["service.namespace"] == nil and IsMap(resource.attributes) and resource.attributes["k8s.namespace.name"] != nil
+              - IsMap(resource.attributes) and resource.attributes["service.namespace"] == nil and resource.attributes["k8s.namespace.name"] != nil
             statements:
               - set(resource.attributes["service.namespace"], resource.attributes["k8s.namespace.name"])
-          # Parse traceparent 00-6ac7dfc54b57c09403006ad060449762-a300e6b481aa1c09-01 from Istio logs
+          # Set severity from severity / level field if the corresponding field
+          # exists. The fields are deleted afterwards to avoid sending redundant
+          # information.
+          - context: log
+            conditions:
+              - IsMap(log.attributes)
+            statements:
+              - set(log.severity_text, log.attributes["level"]) where log.attributes["level"] != nil
+              - set(log.severity_text, log.attributes["severity"]) where log.attributes["severity"] != nil
+              - set(log.severity_text, log.attributes["severity_text"]) where log.attributes["severity_text"] != nil
+              - delete_key(log.attributes, "level")
+              - delete_key(log.attributes, "severity")
+              - delete_key(log.attributes, "severity_text")
+          # Set body from msg / message / body with clear precedence. Preserve
+          # the original fields, when they are not used for the body field, to
+          # avoid losing information.
+          - context: log
+            conditions:
+              - IsMap(log.attributes)
+            statements:
+              - set(log.body, log.attributes["msg"]) where log.attributes["msg"] != nil and IsString(log.attributes["msg"])
+              - set(log.body, log.attributes["message"]) where log.attributes["msg"] == nil and log.attributes["message"] != nil and IsString(log.attributes["message"])
+              - set(log.body, log.attributes["body"]) where log.attributes["msg"] == nil and log.attributes["message"] == nil and log.attributes["body"] != nil and IsString(log.attributes["body"])
+              - delete_key(log.attributes, "msg") where log.attributes["msg"] != nil and IsString(log.attributes["msg"])
+              - delete_key(log.attributes, "message") where log.attributes["msg"] == nil and log.attributes["message"] != nil and IsString(log.attributes["message"])
+              - delete_key(log.attributes, "body") where log.attributes["msg"] == nil and log.attributes["message"] == nil and log.attributes["body"] != nil and IsString(log.attributes["body"])
+          # Parse traceparent (e.g. 00-6ac7dfc54b57c09403006ad060449762-a300e6b481aa1c09-01)
+          # from Istio logs.
           - context: log
             conditions:
               - IsMap(resource.attributes) and resource.attributes["k8s.container.name"] == "istio-proxy"
@@ -233,18 +288,6 @@ data:
         - zpages
 
       pipelines:
-        logs:
-          receivers:
-            - otlp
-            - filelog
-          processors:
-            - memory_limiter
-            - batch
-            - k8sattributes
-            - resourcedetection
-            - transform/logs
-          exporters:
-            - otlphttp/victoriastack
         metrics:
           receivers:
             - otlp
@@ -253,10 +296,28 @@ data:
             - memory_limiter
             - batch
             - k8sattributes
-            - resourcedetection
             - deltatocumulative
           exporters:
-            - otlphttp/victoriastack
+            - otlphttp/victoriametrics
+        logs:
+          receivers:
+            - otlp
+          processors:
+            - memory_limiter
+            - batch
+            - k8sattributes
+          exporters:
+            - otlphttp/victorialogs
+        logs/filelog:
+          receivers:
+            - filelog
+          processors:
+            - memory_limiter
+            - batch
+            - k8sattributes
+            - transform/logs/filelog
+          exporters:
+            - otlphttp/victorialogs/filelog
         traces:
           receivers:
             - otlp
@@ -266,10 +327,9 @@ data:
             - memory_limiter
             - batch
             - k8sattributes
-            - resourcedetection
             - transform/traces
           exporters:
-            - otlphttp/victoriastack
+            - otlphttp/victoriatraces
             - spanmetrics
 
 ---
@@ -332,18 +392,21 @@ spec:
     metadata:
       labels:
         app: otel-collector-agent
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8888"
     spec:
       priorityClassName: system-node-critical
       serviceAccountName: otel-collector-agent
       automountServiceAccountToken: true
+      # The upstream image runs as UID 10001, but the filelog receiver needs root
+      # to read /var/log/pods and to write its checkpoints to the hostPath
+      # /var/lib/otel-collector-agent, which is created as root:root 0755.
+      securityContext:
+        runAsUser: 0
+        runAsGroup: 0
       imagePullSecrets:
         - name: staffbase-registries
       containers:
         - name: otel-collector-agent
-          image: registry.homelab.ricoberger.dev:5555/otel-collector-agent:v0.144.0
+          image: otel/opentelemetry-collector-contrib:0.165.0
           imagePullPolicy: Always
           args:
             - --config=/otel-collector/config/config.yaml
@@ -427,3 +490,21 @@ spec:
               - key: config.yaml
                 path: config.yaml
           name: config
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: otel-collector-agent
+  namespace: observability
+spec:
+  jobLabel: app
+  selector:
+    matchLabels:
+      app: otel-collector-agent
+  podMetricsEndpoints:
+    - port: metrics
+      relabelConfigs:
+        - source_labels: [__meta_kubernetes_pod_node_name]
+          action: replace
+          target_label: node

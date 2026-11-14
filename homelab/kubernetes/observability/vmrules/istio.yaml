@@ -1,0 +1,44 @@
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMRule
+metadata:
+  namespace: observability
+  name: istio
+  labels:
+    vmalert: "true"
+spec:
+  groups:
+    # The following alerts can be tested via the echoserver with the following commands:
+    #   - while :; do curl -o /dev/null -s -w 'Total: %{time_total}s | Status: %{http_code}\n' 'https://echoserver-http.homelab.ricoberger.dev/status?status=random'; sleep 1; done
+    #   - while :; do curl -o /dev/null -s -w 'Total: %{time_total}s | Status: %{http_code}\n' 'https://echoserver-http.homelab.ricoberger.dev/timeout?timeout=2s'; sleep 1; done
+    - name: istio-alerts
+      rules:
+        - alert: IstioHigh4xxErrorRate
+          expr: |
+            sum(rate(istio_requests_total{response_code=~"4.*"}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) / sum(rate(istio_requests_total{}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) * 100 > 5
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: |
+              Istio high 4xx error rate of {{ $value }}% for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}
+
+        - alert: IstioHigh5xxErrorRate
+          expr: |
+            sum(rate(istio_requests_total{response_code=~"5.*"}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) / sum(rate(istio_requests_total{}[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload) * 100 > 5
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            summary: |
+              Istio high 5xx error rate of {{ $value }}% for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}
+
+        - alert: IstioLatency99Percentile
+          expr: |
+            histogram_quantile(0.99, sum(rate(istio_request_duration_milliseconds_bucket[2m])) by (destination_workload_namespace, destination_workload, source_workload_namespace, source_workload, le)) > 1000
+          for: 1m
+          labels:
+            severity: warning
+          annotations:
+            summary: |
+              Istio 1% of the requests are slower than 1000ms for {{ $labels.destination_workload_namespace }}/{{ $labels.destination_workload }} from {{ $labels.source_workload_namespace }}/{{ $labels.source_workload }}

@@ -7,7 +7,9 @@ metadata:
   labels:
     kustomize.toolkit.fluxcd.io/substitute: disabled
 spec:
-  resyncPeriod: 0m
+  # Avoid unnecessary updates to the datasource, so that datasource backend is
+  # not restarted that often.
+  resyncPeriod: 168h
   allowCrossNamespaceImport: true
   instanceSelector: {}
   valuesFrom:
@@ -35,7 +37,7 @@ spec:
       impersonateUser: true
       impersonateGroups: true
       generateKubeconfig: true
-      generateKubeconfigName: homelab
+      generateKubeconfigName: homelab-grafana
       generateKubeconfigTTL: 604800
       generateKubeconfigPort: 11716
       generateKubeconfigRedirectUrls:
@@ -52,7 +54,7 @@ spec:
             "queries": [
               {
                 "refId": "A",
-                "expr": "k8s.pod.name:=\"${pod}\" | sort by (_time) desc",
+                "expr": "service.namespace:=\"${namespace}\" AND k8s.pod.name:=\"${pod}\" | sort by (_time) desc",
                 "queryType": "instant",
                 "maxLines": 1000
               }
@@ -66,7 +68,7 @@ spec:
             "queries": [
               {
                 "refId": "A",
-                "expr": "k8s.pod.name:in(${pod}) | sort by (_time) desc",
+                "expr": "service.namespace:=\"${namespace}\" AND k8s.pod.name:in(${pod}) | sort by (_time) desc",
                 "queryType": "instant",
                 "maxLines": 1000
               }
@@ -101,6 +103,6 @@ spec:
             ]
           }
         }
-      integrationsTracesQuery: '{"datasource":"victoriatraces","queries":[{"query":"$${__value.raw}","refId":"A"}]}'
+      integrationsTracesQuery: '{"datasource":"victoriatraces","queries":[{"query":"${__value.raw}"}]}'
     secureJsonData:
       grafanaPassword: ${GF_SECURITY_ADMIN_PASSWORD}

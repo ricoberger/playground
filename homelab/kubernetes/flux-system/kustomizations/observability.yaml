@@ -7,13 +7,13 @@ metadata:
 spec:
   interval: 15m
   path: ./homelab/kubernetes/observability
+  postBuild:
+    substituteFrom:
+      - kind: ConfigMap
+        name: cluster-vars
   prune: true
   sourceRef:
     kind: GitRepository
     name: playground
-  decryption:
-    provider: sops
-    secretRef:
-      name: sops-gpg
   dependsOn:
     - name: base

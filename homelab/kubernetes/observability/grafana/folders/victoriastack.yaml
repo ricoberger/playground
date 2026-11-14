@@ -2,10 +2,10 @@
 apiVersion: grafana.integreatly.org/v1beta1
 kind: GrafanaFolder
 metadata:
-  name: victoriastack
+  name: observability
   namespace: observability
 spec:
   allowCrossNamespaceImport: true
   instanceSelector: {}
-  uid: victoriastack
-  title: victoriastack
+  uid: observability
+  title: observability

@@ -1,0 +1,501 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vmoperator
+  name: vmoperator
+  namespace: observability
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: vm-leader-election-role
+  namespace: observability
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+    verbs:
+      - get
+      - list
+      - watch
+      - create
+      - update
+      - patch
+      - delete
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps/status
+    verbs:
+      - get
+      - update
+      - patch
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - create
+      - patch
+  - apiGroups:
+      - coordination.k8s.io
+    resources:
+      - leases
+    verbs:
+      - create
+      - get
+      - update
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: vmoperator
+  name: vmoperator
+rules:
+  - nonResourceURLs:
+      - /metrics
+      - /metrics/resources
+      - /metrics/slis
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - configmaps
+      - configmaps/finalizers
+      - endpoints
+      - persistentvolumeclaims
+      - persistentvolumeclaims/finalizers
+      - secrets
+      - secrets/finalizers
+      - serviceaccounts/finalizers
+      - services
+      - services/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - events
+    verbs:
+      - "*"
+  - apiGroups:
+      - ""
+    resources:
+      - namespaces
+      - nodes
+      - nodes/metrics
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - delete
+      - get
+      - list
+      - patch
+      - watch
+  - apiGroups:
+      - ""
+    resources:
+      - pods/eviction
+    verbs:
+      - create
+  - apiGroups:
+      - ""
+    resources:
+      - serviceaccounts
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - apps
+    resources:
+      - daemonsets
+      - daemonsets/finalizers
+      - deployments
+      - deployments/finalizers
+      - replicasets
+      - statefulsets
+      - statefulsets/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - apps
+    resources:
+      - statefulsets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - autoscaling
+    resources:
+      - horizontalpodautoscalers
+    verbs:
+      - "*"
+  - apiGroups:
+      - autoscaling.k8s.io
+    resources:
+      - verticalpodautoscalers
+    verbs:
+      - "*"
+  - apiGroups:
+      - discovery.k8s.io
+    resources:
+      - endpointslices
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - gateway.networking.k8s.io
+    resources:
+      - httproutes
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - image.openshift.io
+      - route.openshift.io
+    resources:
+      - registry/metrics
+      - routers/metrics
+    verbs:
+      - get
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - "*"
+    verbs:
+      - "*"
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - alertmanagerconfigs
+      - podmonitors
+      - probes
+      - prometheusrules
+      - scrapeconfigs
+      - servicemonitors
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - monitoring.coreos.com
+    resources:
+      - alertmanagerconfigs/status
+      - podmonitors/status
+      - probes/status
+      - prometheusrules/status
+      - scrapeconfigs/status
+      - servicemonitors/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingresses/finalizers
+      - networkpolicies
+    verbs:
+      - "*"
+  - apiGroups:
+      - operator.victoriametrics.com
+    resources:
+      - vlagents
+      - vlclusters
+      - vldistributed
+      - vlogs
+      - vlsingles
+      - vmagents
+      - vmalertmanagerconfigs
+      - vmalertmanagers
+      - vmalerts
+      - vmanomalies
+      - vmanomalyconfigs
+      - vmauths
+      - vmclusters
+      - vmdistributed
+      - vmpodscrapes
+      - vmprobes
+      - vmrules
+      - vmscrapeconfigs
+      - vmservicescrapes
+      - vmsingles
+      - vmstaticscrapes
+      - vmusers
+      - vtagents
+      - vtclusters
+      - vtsingles
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - operator.victoriametrics.com
+    resources:
+      - vlagents/finalizers
+      - vlogs/finalizers
+      - vmagents/finalizers
+      - vmalertmanagerconfigs/finalizers
+      - vmalertmanagers/finalizers
+      - vmalerts/finalizers
+      - vmanomalies/finalizers
+      - vmauths/finalizers
+      - vmclusters/finalizers
+      - vmnodescrapes
+      - vmnodescrapes/finalizers
+      - vmpodscrapes/finalizers
+      - vmprobes/finalizers
+      - vmrules/finalizers
+      - vmscrapeconfigs/finalizers
+      - vmservicescrapes/finalizers
+      - vmsingles/finalizers
+      - vmstaticscrapes/finalizers
+      - vmusers/finalizers
+      - vtagents/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - operator.victoriametrics.com
+    resources:
+      - vlagents/status
+      - vlclusters/status
+      - vldistributed/status
+      - vlogs/status
+      - vlsingles/status
+      - vmagents/status
+      - vmalertmanagerconfigs/status
+      - vmalertmanagers/status
+      - vmalerts/status
+      - vmanomalies/status
+      - vmanomalyconfigs/status
+      - vmauths/status
+      - vmclusters/status
+      - vmdistributed/status
+      - vmnodescrapes/status
+      - vmpodscrapes/status
+      - vmprobes/status
+      - vmrules/status
+      - vmscrapeconfigs/status
+      - vmservicescrapes/status
+      - vmsingles/status
+      - vmstaticscrapes/status
+      - vmusers/status
+      - vtagents/status
+      - vtclusters/status
+      - vtsingles/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - operator.victoriametrics.com
+    resources:
+      - vlclusters/finalizers
+      - vldistributed/finalizers
+      - vlsingles/finalizers
+      - vmdistributed/finalizers
+      - vtclusters/finalizers
+      - vtsingles/finalizers
+    verbs:
+      - update
+  - apiGroups:
+      - policy
+    resources:
+      - poddisruptionbudgets
+      - poddisruptionbudgets/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings
+      - clusterroles
+      - rolebindings
+      - roles
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - rbac.authorization.k8s.io
+    resources:
+      - clusterrolebindings/finalizers
+      - clusterroles/finalizers
+    verbs:
+      - "*"
+  - apiGroups:
+      - storage.k8s.io
+    resources:
+      - storageclasses
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: vm-leader-election-rolebinding
+  namespace: observability
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: vm-leader-election-role
+subjects:
+  - kind: ServiceAccount
+    name: vmoperator
+    namespace: observability
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vmoperator
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vmoperator
+subjects:
+  - kind: ServiceAccount
+    name: vmoperator
+    namespace: observability
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: victoria-metrics-operator
+    control-plane: vmoperator
+  name: vmoperator-metrics-service
+  namespace: observability
+spec:
+  ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    control-plane: vmoperator
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/instance: default
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: victoria-metrics-operator
+    control-plane: vmoperator
+  name: vmoperator
+  namespace: observability
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      control-plane: vmoperator
+  template:
+    metadata:
+      annotations:
+        kubectl.kubernetes.io/default-container: manager
+      labels:
+        app.kubernetes.io/instance: default
+        app.kubernetes.io/managed-by: kustomize
+        app.kubernetes.io/name: victoria-metrics-operator
+        control-plane: vmoperator
+    spec:
+      containers:
+        - args:
+            - --leader-elect
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=:8080
+          env:
+            - name: WATCH_NAMESPACE
+              value: ""
+          image: docker.io/victoriametrics/operator:v0.75.2
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          name: manager
+          ports: []
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            limits:
+              cpu: 120m
+              memory: 520Mi
+            requests:
+              cpu: 80m
+              memory: 120Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+          volumeMounts: []
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      serviceAccountName: vmoperator
+      terminationGracePeriodSeconds: 10
+      volumes: []

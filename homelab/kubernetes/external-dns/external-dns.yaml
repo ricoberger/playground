@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: external-dns
-      version: 1.19.0
+      version: 1.23.0
       sourceRef:
         kind: HelmRepository
         name: external-dns
@@ -33,10 +33,6 @@ spec:
     logLevel: info
     logFormat: json
 
-    podAnnotations:
-      prometheus.io/scrape: "true"
-      prometheus.io/port: "7979"
-
     interval: 5m
 
     sources:
@@ -57,3 +53,18 @@ spec:
           secretKeyRef:
             name: cloudflare
             key: CLOUDFLARE_API_TOKEN
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: external-dns
+  namespace: external-dns
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: external-dns
+      app.kubernetes.io/name: external-dns
+  podMetricsEndpoints:
+    - port: http

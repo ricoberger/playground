@@ -3,12 +3,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanaalertrulegroups.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaAlertRuleGroup
     listKind: GrafanaAlertRuleGroupList
@@ -159,6 +160,11 @@ spec:
                         type: object
                       condition:
                         type: string
+                      dashboardUid:
+                        description:
+                          "Deprecated: The field is not used, use
+                          rules[].annotations.__dashboardUid__"
+                        type: string
                       data:
                         items:
                           properties:
@@ -233,30 +239,65 @@ spec:
                         type: string
                       notificationSettings:
                         properties:
+                          active_time_intervals:
+                            description:
+                              ActiveTimeIntervals defines the time intervals
+                              during which notifications should NOT be muted.
+                            items:
+                              type: string
+                            type: array
                           group_by:
+                            description:
+                              GroupBy defines the labels by which incoming
+                              alerts are grouped together.
                             items:
                               type: string
                             type: array
                           group_interval:
+                            description: |-
+                              GroupInterval defines how long to wait before sending a notification about new alerts added
+                              to a group for which an initial notification has already been sent. (e.g. 5m)
                             type: string
                           group_wait:
+                            description:
+                              GroupWait defines how long to initially wait to
+                              send a notification for a group of alerts. (e.g.
+                              30s)
                             type: string
                           mute_time_intervals:
+                            description: |-
+                              MuteTimeIntervals defines the time intervals during which notifications should be muted.
+                              These must match the name of a mute time interval defined in the Alertmanager configuration.
                             items:
                               type: string
                             type: array
                           receiver:
+                            description:
+                              Receiver is the name of the receiver to send
+                              notifications to.
+                            minLength: 1
                             type: string
                           repeat_interval:
+                            description: |-
+                              RepeatInterval defines how long to wait before sending a notification again if it has already
+                              been sent successfully for an alert. (e.g. 4h)
+                              Should not be less than GroupInterval.
                             type: string
                         required:
                           - receiver
                         type: object
+                      panelId:
+                        description:
+                          "Deprecated: The field is not used, use
+                          rules[].annotations.__panelId__"
+                        type: integer
                       record:
                         properties:
                           from:
                             type: string
                           metric:
+                            type: string
+                          targetDatasourceUid:
                             type: string
                         required:
                           - from
@@ -327,7 +368,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -406,12 +447,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanacontactpoints.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaContactPoint
     listKind: GrafanaContactPointList
@@ -765,7 +807,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -844,12 +886,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanadashboards.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaDashboard
     listKind: GrafanaDashboardList
@@ -1168,6 +1211,53 @@ spec:
                     - fileName
                     - gzipJsonnetProject
                   type: object
+                oci:
+                  description:
+                    model from an OCI artifact (e.g. ghcr.io/team/dashboards:v1)
+                  properties:
+                    insecurePlainHTTP:
+                      description: |-
+                        InsecurePlainHTTP switches the registry connection to plain HTTP (non-TLS) instead of HTTPS.
+                        Intended for in-cluster or test registries; HTTPS registries with self-signed
+                        certificates are not supported. Default false.
+                      type: boolean
+                    path:
+                      description:
+                        Path is the path of the file to extract from the
+                        artifact.
+                      maxLength: 512
+                      minLength: 1
+                      type: string
+                    pullSecretRef:
+                      description: |-
+                        PullSecretRef references a kubernetes.io/dockerconfigjson Secret in the same namespace as the CR.
+                        If omitted, anonymous pull is attempted.
+                      properties:
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    reference:
+                      description: |-
+                        Reference is the full OCI artifact reference including a tag or digest,
+                        e.g. "ghcr.io/team/dashboards:v1.4.7" or
+                        "ghcr.io/team/dashboards@sha256:abc123...". Prefer a digest for
+                        reproducible deployments.
+                      maxLength: 512
+                      minLength: 3
+                      pattern: ^[^:@]+(:[^:@/]+|@sha256:[a-fA-F0-9]{64})$
+                      type: string
+                  required:
+                    - path
+                    - reference
+                  type: object
                 plugins:
                   description: plugins
                   items:
@@ -1183,6 +1273,46 @@ spec:
                       - version
                     type: object
                   type: array
+                publicSharing:
+                  description:
+                    Allows configuration of sharing the dashboard publicly
+                  properties:
+                    accessToken:
+                      description:
+                        Optional. Unique access token. If empty it will generate
+                        a new access token per instance.
+                      maxLength: 36
+                      minLength: 36
+                      type: string
+                      x-kubernetes-validations:
+                        - message: spec.publicDashboard.accessToken is immutable
+                          rule: self == oldSelf
+                        - message:
+                            spec.publicDashboard.accessToken must be a valid
+                            uuid
+                          rule: "!format.uuid().validate(self).hasValue()"
+                    annotationsEnabled:
+                      description:
+                        Optional. When set to true, shows annotations. The
+                        default value is false.
+                      type: boolean
+                    enabled:
+                      default: true
+                      description:
+                        Optional. Set to false to disable sharing, the public
+                        dashboard is still created. The default value is true.
+                      type: boolean
+                    timeSelectionEnabled:
+                      description:
+                        Optional. when set to true, the time picker is enabled
+                        in the shared dashboard. The default value is false.
+                      type: boolean
+                  type: object
+                  x-kubernetes-validations:
+                    - message: spec.publicDashboard.accessToken is immutable
+                      rule:
+                        ((!has(oldSelf.accessToken) && !has(self.accessToken))
+                        || (has(oldSelf.accessToken) && has(self.accessToken)))
                 resyncPeriod:
                   description:
                     How often the resource is synced, defaults to 10m0s if not
@@ -1206,6 +1336,7 @@ spec:
                       rule: self == oldSelf
                 url:
                   description: model url
+                  pattern: ^https?://.+$
                   type: string
                 urlAuthorization:
                   description: authorization options for model from url
@@ -1268,6 +1399,32 @@ spec:
                           x-kubernetes-map-type: atomic
                       type: object
                   type: object
+                variables:
+                  description: |-
+                    overrides the default (current) value of named template variables in the dashboard model.
+                    Variables that are not present in the model are ignored.
+                  items:
+                    description: |-
+                      GrafanaContentVariable overrides the default (current) value of a named template
+                      variable (templating.list[]) in the resolved dashboard model.
+                    properties:
+                      name:
+                        description:
+                          Name of the template variable to override, matching
+                          templating.list[].name in the model.
+                        minLength: 1
+                        type: string
+                      value:
+                        description: |-
+                          Value is the new default value. For datasource variables this is the datasource UID or
+                          name; for query, custom, constant and textbox variables it is the selected value.
+                          Multi-value (multi-select) variables are collapsed to this single value.
+                        type: string
+                    required:
+                      - name
+                      - value
+                    type: object
+                  type: array
               required:
                 - instanceSelector
               type: object
@@ -1308,7 +1465,7 @@ spec:
                   type: boolean
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -1384,6 +1541,11 @@ spec:
                     instances
                   format: date-time
                   type: string
+                publicSharingPath:
+                  description:
+                    The resulting path where a public sharing config is
+                    available
+                  type: string
                 uid:
                   type: string
               type: object
@@ -1399,12 +1561,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanadatasources.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaDatasource
     listKind: GrafanaDatasourceList
@@ -1685,7 +1848,7 @@ spec:
                   type: boolean
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -1772,12 +1935,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanafolders.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaFolder
     listKind: GrafanaFolderList
@@ -1951,7 +2115,7 @@ spec:
                   type: boolean
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -2032,12 +2196,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanalibrarypanels.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaLibraryPanel
     listKind: GrafanaLibraryPanelList
@@ -2350,6 +2515,53 @@ spec:
                     - fileName
                     - gzipJsonnetProject
                   type: object
+                oci:
+                  description:
+                    model from an OCI artifact (e.g. ghcr.io/team/dashboards:v1)
+                  properties:
+                    insecurePlainHTTP:
+                      description: |-
+                        InsecurePlainHTTP switches the registry connection to plain HTTP (non-TLS) instead of HTTPS.
+                        Intended for in-cluster or test registries; HTTPS registries with self-signed
+                        certificates are not supported. Default false.
+                      type: boolean
+                    path:
+                      description:
+                        Path is the path of the file to extract from the
+                        artifact.
+                      maxLength: 512
+                      minLength: 1
+                      type: string
+                    pullSecretRef:
+                      description: |-
+                        PullSecretRef references a kubernetes.io/dockerconfigjson Secret in the same namespace as the CR.
+                        If omitted, anonymous pull is attempted.
+                      properties:
+                        name:
+                          default: ""
+                          description: |-
+                            Name of the referent.
+                            This field is effectively required, but due to backwards compatibility is
+                            allowed to be empty. Instances of this type with an empty value here are
+                            almost certainly wrong.
+                            More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                          type: string
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    reference:
+                      description: |-
+                        Reference is the full OCI artifact reference including a tag or digest,
+                        e.g. "ghcr.io/team/dashboards:v1.4.7" or
+                        "ghcr.io/team/dashboards@sha256:abc123...". Prefer a digest for
+                        reproducible deployments.
+                      maxLength: 512
+                      minLength: 3
+                      pattern: ^[^:@]+(:[^:@/]+|@sha256:[a-fA-F0-9]{64})$
+                      type: string
+                  required:
+                    - path
+                    - reference
+                  type: object
                 plugins:
                   description: plugins
                   items:
@@ -2388,6 +2600,7 @@ spec:
                       rule: self == oldSelf
                 url:
                   description: model url
+                  pattern: ^https?://.+$
                   type: string
                 urlAuthorization:
                   description: authorization options for model from url
@@ -2479,7 +2692,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -2570,12 +2783,376 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
+  name: grafanamanifests.grafana.integreatly.org
+spec:
+  group: grafana.integreatly.org
+  names:
+    categories:
+      - all
+      - grafana-operator
+    kind: GrafanaManifest
+    listKind: GrafanaManifestList
+    plural: grafanamanifests
+    singular: grafanamanifest
+  scope: Namespaced
+  versions:
+    - additionalPrinterColumns:
+        - jsonPath: .spec.template.kind
+          name: Kind
+          type: string
+        - format: date-time
+          jsonPath: .status.lastResync
+          name: Last resync
+          type: date
+        - jsonPath: .metadata.creationTimestamp
+          name: Age
+          type: date
+      name: v1beta1
+      schema:
+        openAPIV3Schema:
+          description: GrafanaManifest is the Schema for the grafana manifests
+          properties:
+            apiVersion:
+              description: |-
+                APIVersion defines the versioned schema of this representation of an object.
+                Servers should convert recognized schemas to the latest internal value, and
+                may reject unrecognized values.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+              type: string
+            kind:
+              description: |-
+                Kind is a string value representing the REST resource this object represents.
+                Servers may infer this from the endpoint the client submits requests to.
+                Cannot be updated.
+                In CamelCase.
+                More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+              type: string
+            metadata:
+              type: object
+            spec:
+              description:
+                GrafanaManifestSpec defines the desired state of a
+                GrafanaManifest
+              properties:
+                allowCrossNamespaceImport:
+                  default: false
+                  description:
+                    Allow the Operator to match this resource with Grafanas
+                    outside the current namespace
+                  type: boolean
+                instanceSelector:
+                  description: Selects Grafana instances for import
+                  properties:
+                    matchExpressions:
+                      description:
+                        matchExpressions is a list of label selector
+                        requirements. The requirements are ANDed.
+                      items:
+                        description: |-
+                          A label selector requirement is a selector that contains values, a key, and an operator that
+                          relates the key and values.
+                        properties:
+                          key:
+                            description:
+                              key is the label key that the selector applies to.
+                            type: string
+                          operator:
+                            description: |-
+                              operator represents a key's relationship to a set of values.
+                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                            type: string
+                          values:
+                            description: |-
+                              values is an array of string values. If the operator is In or NotIn,
+                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
+                              the values array must be empty. This array is replaced during a strategic
+                              merge patch.
+                            items:
+                              type: string
+                            type: array
+                            x-kubernetes-list-type: atomic
+                        required:
+                          - key
+                          - operator
+                        type: object
+                      type: array
+                      x-kubernetes-list-type: atomic
+                    matchLabels:
+                      additionalProperties:
+                        type: string
+                      description: |-
+                        matchLabels is a map of {key,value} pairs. A single {key,value} in the matchLabels
+                        map is equivalent to an element of matchExpressions, whose key field is "key", the
+                        operator is "In", and the values array contains only "value". The requirements are ANDed.
+                      type: object
+                  type: object
+                  x-kubernetes-map-type: atomic
+                  x-kubernetes-validations:
+                    - message: spec.instanceSelector is immutable
+                      rule: self == oldSelf
+                patch:
+                  properties:
+                    env:
+                      items:
+                        properties:
+                          name:
+                            type: string
+                          valueFrom:
+                            properties:
+                              configMapKeyRef:
+                                description: Selects a key of a ConfigMap.
+                                properties:
+                                  key:
+                                    description: The key to select.
+                                    type: string
+                                  name:
+                                    default: ""
+                                    description: |-
+                                      Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    type: string
+                                  optional:
+                                    description:
+                                      Specify whether the ConfigMap or its key
+                                      must be defined
+                                    type: boolean
+                                required:
+                                  - key
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              grafanaRef:
+                                description:
+                                  ObjectFieldSelector selects an APIVersioned
+                                  field of an object.
+                                properties:
+                                  apiVersion:
+                                    description:
+                                      Version of the schema the FieldPath is
+                                      written in terms of, defaults to "v1".
+                                    type: string
+                                  fieldPath:
+                                    description:
+                                      Path of the field to select in the
+                                      specified API version.
+                                    type: string
+                                required:
+                                  - fieldPath
+                                type: object
+                                x-kubernetes-map-type: atomic
+                              secretKeyRef:
+                                description: Selects a key of a Secret.
+                                properties:
+                                  key:
+                                    description:
+                                      The key of the secret to select
+                                      from.  Must be a valid secret key.
+                                    type: string
+                                  name:
+                                    default: ""
+                                    description: |-
+                                      Name of the referent.
+                                      This field is effectively required, but due to backwards compatibility is
+                                      allowed to be empty. Instances of this type with an empty value here are
+                                      almost certainly wrong.
+                                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
+                                    type: string
+                                  optional:
+                                    description:
+                                      Specify whether the Secret or its key must
+                                      be defined
+                                    type: boolean
+                                required:
+                                  - key
+                                type: object
+                                x-kubernetes-map-type: atomic
+                            type: object
+                        required:
+                          - name
+                          - valueFrom
+                        type: object
+                      type: array
+                    scripts:
+                      items:
+                        type: string
+                      type: array
+                  required:
+                    - scripts
+                  type: object
+                resyncPeriod:
+                  description:
+                    How often the resource is synced, defaults to 10m0s if not
+                    set
+                  pattern: ^([0-9]+(\.[0-9]+)?(ns|us|µs|ms|s|m|h))+$
+                  type: string
+                suspend:
+                  description:
+                    Suspend pauses synchronizing attempts and tells the operator
+                    to ignore changes
+                  type: boolean
+                template:
+                  properties:
+                    apiVersion:
+                      description:
+                        APIVersion defines the versioned schema of this
+                        representation of an object.
+                      type: string
+                    kind:
+                      description:
+                        Kind is a string value representing the REST resource
+                        this object represents.
+                      type: string
+                      x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
+                    metadata:
+                      description: |-
+                        RequiredObjectMeta contains only a [subset of the fields included in k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#objectmeta-v1-meta).
+                        It requires `name` to be set
+                      properties:
+                        annotations:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        labels:
+                          additionalProperties:
+                            type: string
+                          type: object
+                        name:
+                          type: string
+                          x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
+                        namespace:
+                          type: string
+                          x-kubernetes-validations:
+                            - message: Value is immutable
+                              rule: self == oldSelf
+                      required:
+                        - name
+                      type: object
+                      x-kubernetes-validations:
+                        - message: namespace is immutable
+                          rule:
+                            ((!has(oldSelf.__namespace__) &&
+                            !has(self.__namespace__)) ||
+                            (has(oldSelf.__namespace__) &&
+                            has(self.__namespace__)))
+                    spec:
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                    - apiVersion
+                    - kind
+                    - metadata
+                  type: object
+              required:
+                - instanceSelector
+                - template
+              type: object
+              x-kubernetes-validations:
+                - message:
+                    disabling spec.allowCrossNamespaceImport requires a recreate
+                    to ensure desired state
+                  rule:
+                    "!oldSelf.allowCrossNamespaceImport ||
+                    (oldSelf.allowCrossNamespaceImport &&
+                    self.allowCrossNamespaceImport)"
+            status:
+              description:
+                GrafanaManifestStatus defines the observed state of
+                GrafanaManifest
+              properties:
+                conditions:
+                  description:
+                    Results when synchronizing resource with Grafana instances
+                  items:
+                    description:
+                      Condition contains details for one aspect of the current
+                      state of this API Resource.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          lastTransitionTime is the last time the condition transitioned from one status to another.
+                          This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        format: date-time
+                        type: string
+                      message:
+                        description: |-
+                          message is a human readable message indicating details about the transition.
+                          This may be an empty string.
+                        maxLength: 32768
+                        type: string
+                      observedGeneration:
+                        description: |-
+                          observedGeneration represents the .metadata.generation that the condition was set based upon.
+                          For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                          with respect to the current state of the instance.
+                        format: int64
+                        minimum: 0
+                        type: integer
+                      reason:
+                        description: |-
+                          reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                          Producers of specific condition types may define expected values and meanings for this field,
+                          and whether the values are considered a guaranteed API.
+                          The value should be a CamelCase string.
+                          This field may not be empty.
+                        maxLength: 1024
+                        minLength: 1
+                        pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                        type: string
+                      status:
+                        description:
+                          status of the condition, one of True, False, Unknown.
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        type: string
+                      type:
+                        description:
+                          type of condition in CamelCase or in
+                          foo.example.com/CamelCase.
+                        maxLength: 316
+                        pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                        type: string
+                    required:
+                      - lastTransitionTime
+                      - message
+                      - reason
+                      - status
+                      - type
+                    type: object
+                  type: array
+                lastResync:
+                  description:
+                    Last time the resource was synchronized with Grafana
+                    instances
+                  format: date-time
+                  type: string
+              type: object
+          required:
+            - spec
+          type: object
+      served: true
+      storage: true
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanamutetimings.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaMuteTiming
     listKind: GrafanaMuteTimingList
@@ -2774,7 +3351,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -2853,12 +3430,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafananotificationpolicies.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaNotificationPolicy
     listKind: GrafanaNotificationPolicyList
@@ -2977,11 +3555,14 @@ spec:
                   description: Routes for alerts to match against
                   properties:
                     active_time_intervals:
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       items:
                         type: string
                       type: array
                     continue:
-                      description: continue
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       type: boolean
                     group_by:
                       description: group by
@@ -2997,17 +3578,23 @@ spec:
                     match_re:
                       additionalProperties:
                         type: string
-                      description: match re
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       type: object
                     matchers:
-                      description: matchers
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       items:
                         properties:
                           isEqual:
-                            description: is equal
+                            description:
+                              "Deprecated: Does nothing and is not exported by
+                              Grafana"
                             type: boolean
                           isRegex:
-                            description: is regex
+                            description:
+                              "Deprecated: Does nothing and is not exported by
+                              Grafana"
                             type: boolean
                           name:
                             description: name
@@ -3021,12 +3608,14 @@ spec:
                         type: object
                       type: array
                     mute_time_intervals:
-                      description: mute time intervals
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       items:
                         type: string
                       type: array
                     object_matchers:
-                      description: object matchers
+                      description:
+                        "Deprecated: Never worked on the top level route node"
                       items:
                         description: |-
                           ObjectMatcher ObjectMatcher is a matcher that can be used to filter alerts.
@@ -3037,7 +3626,7 @@ spec:
                         type: array
                       type: array
                     provenance:
-                      description: provenance
+                      description: "Deprecated: Does nothing"
                       type: string
                     receiver:
                       description: receiver
@@ -3102,6 +3691,24 @@ spec:
                   required:
                     - receiver
                   type: object
+                  x-kubernetes-validations:
+                    - message: continue is invalid on the top level route node
+                      rule: "!has(self.__continue__)"
+                    - message: match_re is invalid on the top level route node
+                      rule: "!has(self.match_re)"
+                    - message: matchers is invalid on the top level route node
+                      rule: "!has(self.matchers)"
+                    - message:
+                        object_matchers is invalid on the top level route node
+                      rule: "!has(self.object_matchers)"
+                    - message:
+                        mute_time_intervals is invalid on the top level route
+                        node
+                      rule: "!has(self.mute_time_intervals)"
+                    - message:
+                        active_time_intervals is invalid on the top level route
+                        node
+                      rule: "!has(self.active_time_intervals)"
                 suspend:
                   description:
                     Suspend pauses synchronizing attempts and tells the operator
@@ -3130,7 +3737,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -3213,12 +3820,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafananotificationpolicyroutes.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaNotificationPolicyRoute
     listKind: GrafanaNotificationPolicyRouteList
@@ -3256,6 +3864,7 @@ spec:
                 GrafanaNotificationPolicyRoute
               properties:
                 active_time_intervals:
+                  description: active time intervals
                   items:
                     type: string
                   type: array
@@ -3283,10 +3892,14 @@ spec:
                   items:
                     properties:
                       isEqual:
-                        description: is equal
+                        description:
+                          "Deprecated: Does nothing and is not exported by
+                          Grafana"
                         type: boolean
                       isRegex:
-                        description: is regex
+                        description:
+                          "Deprecated: Does nothing and is not exported by
+                          Grafana"
                         type: boolean
                       name:
                         description: name
@@ -3316,7 +3929,7 @@ spec:
                     type: array
                   type: array
                 provenance:
-                  description: provenance
+                  description: "Deprecated: Does nothing"
                   type: string
                 receiver:
                   description: receiver
@@ -3385,7 +3998,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -3464,12 +4077,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafananotificationtemplates.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaNotificationTemplate
     listKind: GrafanaNotificationTemplateList
@@ -3616,7 +4230,7 @@ spec:
               properties:
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current
@@ -3695,12 +4309,13 @@ apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanas.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: Grafana
     listKind: GrafanaList
@@ -7400,6 +8015,10 @@ spec:
                                                       type: integer
                                                     signerName:
                                                       type: string
+                                                    userAnnotations:
+                                                      additionalProperties:
+                                                        type: string
+                                                      type: object
                                                   required:
                                                     - keyType
                                                     - signerName
@@ -7698,6 +8317,15 @@ spec:
                         - key
                       type: object
                       x-kubernetes-map-type: atomic
+                    tenantNamespace:
+                      default: default
+                      description: |-
+                        TenantNamespace is used as the `namespace` value for GrafanaManifest resources in multi-tenant scenarios
+                        defaults to `default`
+                      type: string
+                      x-kubernetes-validations:
+                        - message: Value is immutable
+                          rule: self == oldSelf
                     tls:
                       description: DEPRECATED, use top level `tls` instead.
                       properties:
@@ -7734,6 +8362,7 @@ spec:
                     url:
                       description:
                         URL of the external grafana instance you want to manage.
+                      pattern: ^https?://.+$
                       type: string
                   required:
                     - url
@@ -7839,6 +8468,7 @@ spec:
                             type: string
                           maxItems: 16
                           type: array
+                          x-kubernetes-list-type: atomic
                         parentRefs:
                           description: |-
                             ParentRefs references the resources (usually Gateways) that a Route wants
@@ -7903,7 +8533,6 @@ spec:
                             the intended destination of the connections are a Service targeted as a
                             ParentRef of the Route.
                             </gateway:experimental:description>
-
                             <gateway:standard:validation:XValidation:message="sectionName must be specified when parentRefs includes 2 or more references to the same parent",rule="self.all(p1, self.all(p2, p1.group == p2.group && p1.kind == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__) || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__ == '')) || (has(p1.__namespace__) && has(p2.__namespace__) && p1.__namespace__ == p2.__namespace__ )) ? ((!has(p1.sectionName) || p1.sectionName == '') == (!has(p2.sectionName) || p2.sectionName == '')) : true))">
                             <gateway:standard:validation:XValidation:message="sectionName must be unique when parentRefs includes 2 or more references to the same parent",rule="self.all(p1, self.exists_one(p2, p1.group == p2.group && p1.kind == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__) || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__ == '')) || (has(p1.__namespace__) && has(p2.__namespace__) && p1.__namespace__ == p2.__namespace__ )) && (((!has(p1.sectionName) || p1.sectionName == '') && (!has(p2.sectionName) || p2.sectionName == '')) || (has(p1.sectionName) && has(p2.sectionName) && p1.sectionName == p2.sectionName))))">
                             <gateway:experimental:validation:XValidation:message="sectionName or port must be specified when parentRefs includes 2 or more references to the same parent",rule="self.all(p1, self.all(p2, p1.group == p2.group && p1.kind == p2.kind && p1.name == p2.name && (((!has(p1.__namespace__) || p1.__namespace__ == '') && (!has(p2.__namespace__) || p2.__namespace__ == '')) || (has(p1.__namespace__) && has(p2.__namespace__) && p1.__namespace__ == p2.__namespace__)) ? ((!has(p1.sectionName) || p1.sectionName == '') == (!has(p2.sectionName) || p2.sectionName == '') && (!has(p1.port) || p1.port == 0) == (!has(p2.port) || p2.port == 0)): true))">
@@ -8057,12 +8686,8 @@ spec:
                             type: object
                           maxItems: 32
                           type: array
+                          x-kubernetes-list-type: atomic
                         rules:
-                          default:
-                            - matches:
-                                - path:
-                                    type: PathPrefix
-                                    value: /
                           description: |-
                             Rules are a list of HTTP matchers, filters and actions.
 
@@ -8153,8 +8778,8 @@ spec:
                                           authentication strategies, rate-limiting, and traffic shaping. API
                                           guarantee/conformance is defined based on the type of the filter.
 
-                                          <gateway:experimental:validation:XValidation:message="filter.cors must be nil if the filter.type is not CORS",rule="!(has(self.cors) && self.type != 'CORS')">
-                                          <gateway:experimental:validation:XValidation:message="filter.cors must be specified for CORS filter.type",rule="!(!has(self.cors) && self.type == 'CORS')">
+                                          <gateway:experimental:validation:XValidation:message="filter.externalAuth must be nil if the filter.type is not ExternalAuth",rule="!(has(self.externalAuth) && self.type != 'ExternalAuth')">
+                                          <gateway:experimental:validation:XValidation:message="filter.externalAuth must be specified for ExternalAuth filter.type",rule="!(!has(self.externalAuth) && self.type == 'ExternalAuth')">
                                         properties:
                                           cors:
                                             description: |-
@@ -8162,38 +8787,34 @@ spec:
                                               cross-origin request based on HTTP response header.
 
                                               Support: Extended
-
-                                              <gateway:experimental>
                                             properties:
                                               allowCredentials:
                                                 description: |-
                                                   AllowCredentials indicates whether the actual cross-origin request allows
                                                   to include credentials.
 
-                                                  The only valid value for the `Access-Control-Allow-Credentials` response
-                                                  header is true (case-sensitive).
+                                                  When set to true, the gateway will include the `Access-Control-Allow-Credentials`
+                                                  response header with value true (case-sensitive).
 
-                                                  If the credentials are not allowed in cross-origin requests, the gateway
-                                                  will omit the header `Access-Control-Allow-Credentials` entirely rather
-                                                  than setting its value to false.
+                                                  When set to false or omitted the gateway will omit the header
+                                                  `Access-Control-Allow-Credentials` entirely (this is the standard CORS
+                                                  behavior).
 
                                                   Support: Extended
-                                                enum:
-                                                  - true
                                                 type: boolean
                                               allowHeaders:
                                                 description: |-
                                                   AllowHeaders indicates which HTTP request headers are supported for
                                                   accessing the requested resource.
 
-                                                  Header names are not case sensitive.
+                                                  Header names are not case-sensitive.
 
                                                   Multiple header names in the value of the `Access-Control-Allow-Headers`
                                                   response header are separated by a comma (",").
 
-                                                  When the `AllowHeaders` field is configured with one or more headers, the
+                                                  When the `allowHeaders` field is configured with one or more headers, the
                                                   gateway must return the `Access-Control-Allow-Headers` response header
-                                                  which value is present in the `AllowHeaders` field.
+                                                  which value is present in the `allowHeaders` field.
 
                                                   If any header name in the `Access-Control-Request-Headers` request header
                                                   is not included in the list of header names specified by the response
@@ -8205,18 +8826,20 @@ spec:
                                                   client side.
 
                                                   A wildcard indicates that the requests with all HTTP headers are allowed.
-                                                  The `Access-Control-Allow-Headers` response header can only use `*`
-                                                  wildcard as value when the `AllowCredentials` field is unspecified.
 
-                                                  When the `AllowCredentials` field is specified and `AllowHeaders` field
-                                                  specified with the `*` wildcard, the gateway must specify one or more
-                                                  HTTP headers in the value of the `Access-Control-Allow-Headers` response
-                                                  header. The value of the header `Access-Control-Allow-Headers` is same as
-                                                  the `Access-Control-Request-Headers` header provided by the client. If
-                                                  the header `Access-Control-Request-Headers` is not included in the
-                                                  request, the gateway will omit the `Access-Control-Allow-Headers`
-                                                  response header, instead of specifying the `*` wildcard. A Gateway
-                                                  implementation may choose to add implementation-specific default headers.
+                                                  If the configuration contains the wildcard `*` in `allowHeaders` and
+                                                  `allowCredentials` is set to `false`, the `Access-Control-Allow-Headers`
+                                                  response header may either contain the wildcard `*` or echo the value
+                                                  of the `Access-Control-Request-Headers` request header.
+
+                                                  If the configuration contains the wildcard `*` in `allowHeaders` and
+                                                  `allowCredentials` is set to `true`, the gateway must not return `*`
+                                                  in the `Access-Control-Allow-Headers` response header. Instead, it must
+                                                  return one or more header names matching the value of the
+                                                  `Access-Control-Request-Headers` request header.
+                                                  If the `Access-Control-Request-Headers` header is not present in the
+                                                  request, the gateway must omit the `Access-Control-Allow-Headers`
+                                                  response header.
 
                                                   Support: Extended
                                                 items:
@@ -8240,6 +8863,14 @@ spec:
                                                 maxItems: 64
                                                 type: array
                                                 x-kubernetes-list-type: set
+                                                x-kubernetes-validations:
+                                                  - message:
+                                                      AllowHeaders cannot
+                                                      contain '*' alongside
+                                                      other methods
+                                                    rule:
+                                                      "!('*' in self &&
+                                                      self.size() > 1)"
                                               allowMethods:
                                                 description: |-
                                                   AllowMethods indicates which HTTP methods are supported for accessing the
@@ -8248,7 +8879,7 @@ spec:
                                                   Valid values are any method defined by RFC9110, along with the special
                                                   value `*`, which represents all HTTP methods are allowed.
 
-                                                  Method names are case sensitive, so these values are also case-sensitive.
+                                                  Method names are case-sensitive, so these values are also case-sensitive.
                                                   (See https://www.rfc-editor.org/rfc/rfc2616#section-5.1.1)
 
                                                   Multiple method names in the value of the `Access-Control-Allow-Methods`
@@ -8257,29 +8888,29 @@ spec:
                                                   A CORS-safelisted method is a method that is `GET`, `HEAD`, or `POST`.
                                                   (See https://fetch.spec.whatwg.org/#cors-safelisted-method) The
                                                   CORS-safelisted methods are always allowed, regardless of whether they
-                                                  are specified in the `AllowMethods` field.
+                                                  are specified in the `allowMethods` field.
 
-                                                  When the `AllowMethods` field is configured with one or more methods, the
+                                                  When the `allowMethods` field is configured with one or more methods, the
                                                   gateway must return the `Access-Control-Allow-Methods` response header
-                                                  which value is present in the `AllowMethods` field.
+                                                  which value is present in the `allowMethods` field.
 
                                                   If the HTTP method of the `Access-Control-Request-Method` request header
                                                   is not included in the list of methods specified by the response header
                                                   `Access-Control-Allow-Methods`, it will present an error on the client
                                                   side.
 
-                                                  The `Access-Control-Allow-Methods` response header can only use `*`
-                                                  wildcard as value when the `AllowCredentials` field is unspecified.
+                                                  If the configuration contains the wildcard `*` in `allowMethods` and
+                                                  `allowCredentials` is set to `false`, the `Access-Control-Allow-Methods`
+                                                  response header may either contain the wildcard `*` or echo the value
+                                                  of the `Access-Control-Request-Method` request header.
 
-                                                  When the `AllowCredentials` field is specified and `AllowMethods` field
-                                                  specified with the `*` wildcard, the gateway must specify one HTTP method
-                                                  in the value of the Access-Control-Allow-Methods response header. The
-                                                  value of the header `Access-Control-Allow-Methods` is same as the
-                                                  `Access-Control-Request-Method` header provided by the client. If the
-                                                  header `Access-Control-Request-Method` is not included in the request,
-                                                  the gateway will omit the `Access-Control-Allow-Methods` response header,
-                                                  instead of specifying the `*` wildcard. A Gateway implementation may
-                                                  choose to add implementation-specific default methods.
+                                                  If the configuration contains the wildcard `*` in `allowMethods` and
+                                                  `allowCredentials` is set to `true`, the gateway must not return `*`
+                                                  in the `Access-Control-Allow-Methods` response header. Instead, it must
+                                                  return a single HTTP method matching the value of the
+                                                  `Access-Control-Request-Method` request header.
+                                                  If the `Access-Control-Request-Method` header is not present in the request,
+                                                  the gateway must omit the `Access-Control-Allow-Methods` response header.
 
                                                   Support: Extended
                                                 items:
@@ -8333,7 +8964,7 @@ spec:
                                                   An origin value that includes _only_ the `*` character indicates requests
                                                   from all `Origin`s are allowed.
 
-                                                  When the `AllowOrigins` field is configured with multiple origins, it
+                                                  When the `allowOrigins` field is configured with multiple origins, it
                                                   means the server supports clients from multiple origins. If the request
                                                   `Origin` matches the configured allowed origins, the gateway must return
                                                   the given `Origin` and sets value of the header
@@ -8350,32 +8981,44 @@ spec:
                                                   the CORS headers. The cross-origin request fails on the client side.
                                                   Therefore, the client doesn't attempt the actual cross-origin request.
 
-                                                  The `Access-Control-Allow-Origin` response header can only use `*`
-                                                  wildcard as value when the `AllowCredentials` field is unspecified.
+                                                  Conversely, if the request `Origin` matches one of the configured
+                                                  allowed origins, the gateway sets the response header
+                                                  `Access-Control-Allow-Origin` to the same value as the `Origin`
+                                                  header provided by the client.
 
-                                                  When the `AllowCredentials` field is specified and `AllowOrigins` field
-                                                  specified with the `*` wildcard, the gateway must return a single origin
-                                                  in the value of the `Access-Control-Allow-Origin` response header,
-                                                  instead of specifying the `*` wildcard. The value of the header
-                                                  `Access-Control-Allow-Origin` is same as the `Origin` header provided by
-                                                  the client.
+                                                  If the configuration contains the wildcard `*` in `allowOrigins` and
+                                                  `allowCredentials` is set to `false`, the `Access-Control-Allow-Origin`
+                                                  response header may either contain the wildcard `*` or echo the value
+                                                  of the `Origin` request header.
+
+                                                  If the configuration contains the wildcard `*` in `allowOrigins` and
+                                                  `allowCredentials` is set to `true`, the gateway must not return `*`
+                                                  in the `Access-Control-Allow-Origin` response header. Instead, it must
+                                                  return a single origin matching the value of the `Origin` request header.
 
                                                   Support: Extended
                                                 items:
                                                   description: |-
-                                                    The AbsoluteURI MUST NOT be a relative URI, and it MUST follow the URI syntax and
-                                                    encoding rules specified in RFC3986.  The AbsoluteURI MUST include both a
-                                                    scheme (e.g., "http" or "spiffe") and a scheme-specific-part.  URIs that
-                                                    include an authority MUST include a fully qualified domain name or
+                                                    The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
+                                                    encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
+                                                    scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
+                                                    URIs that include an authority MUST include a fully qualified domain name or
                                                     IP address as the host.
-                                                    <gateway:util:excludeFromCRD> The below regex is taken from the regex section in RFC 3986 with a slight modification to enforce a full URI and not relative. </gateway:util:excludeFromCRD>
                                                   maxLength: 253
                                                   minLength: 1
-                                                  pattern: ^(([^:/?#]+):)(//([^/?#]*))([^?#]*)(\?([^#]*))?(#(.*))?
+                                                  pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                                   type: string
                                                 maxItems: 64
                                                 type: array
                                                 x-kubernetes-list-type: set
+                                                x-kubernetes-validations:
+                                                  - message:
+                                                      AllowOrigins cannot
+                                                      contain '*' alongside
+                                                      other origins
+                                                    rule:
+                                                      "!('*' in self &&
+                                                      self.size() > 1)"
                                               exposeHeaders:
                                                 description: |-
                                                   ExposeHeaders indicates which HTTP response headers can be exposed
@@ -8394,19 +9037,25 @@ spec:
                                                   (See https://fetch.spec.whatwg.org/#cors-safelisted-response-header-name)
                                                   The CORS-safelisted response headers are exposed to client by default.
 
-                                                  When an HTTP header name is specified using the `ExposeHeaders` field,
+                                                  When an HTTP header name is specified using the `exposeHeaders` field,
                                                   this additional header will be exposed as part of the response to the
                                                   client.
 
-                                                  Header names are not case sensitive.
+                                                  Header names are not case-sensitive.
 
                                                   Multiple header names in the value of the `Access-Control-Expose-Headers`
                                                   response header are separated by a comma (",").
 
                                                   A wildcard indicates that the responses with all HTTP headers are exposed
-                                                  to clients. The `Access-Control-Expose-Headers` response header can only
-                                                  use `*` wildcard as value when the `AllowCredentials` field is
-                                                  unspecified.
+                                                  to clients.
+
+                                                  If the configuration contains the wildcard `*` in `exposeHeaders` and
+                                                  `allowCredentials` is set to `false`, the `Access-Control-Expose-Headers`
+                                                  response header can contain the wildcard `*`.
+
+                                                  If the configuration contains the wildcard `*` in `exposeHeaders` and
+                                                  `allowCredentials` is set to `true`, the gateway cannot use the `*`
+                                                  in the `Access-Control-Expose-Headers` response header.
 
                                                   Support: Extended
                                                 items:
@@ -8442,6 +9091,9 @@ spec:
 
                                                   The default value of `Access-Control-Max-Age` response header is 5
                                                   (seconds).
+
+                                                  When the `MaxAge` field is unspecified, the gateway sets the response
+                                                  header "Access-Control-Max-Age: 5" by default.
                                                 format: int32
                                                 minimum: 1
                                                 type: integer
@@ -8485,6 +9137,272 @@ spec:
                                               - kind
                                               - name
                                             type: object
+                                          externalAuth:
+                                            description: |-
+                                              ExternalAuth configures settings related to sending request details
+                                              to an external auth service. The external service MUST authenticate
+                                              the request, and MAY authorize the request as well.
+
+                                              If there is any problem communicating with the external service,
+                                              this filter MUST fail closed.
+
+                                              Support: Extended
+
+                                              <gateway:experimental>
+                                            properties:
+                                              backendRef:
+                                                description: |-
+                                                  BackendRef is a reference to a backend to send authorization
+                                                  requests to.
+
+                                                  The backend must speak the selected protocol (GRPC or HTTP) on the
+                                                  referenced port.
+
+                                                  If the backend service requires TLS, use BackendTLSPolicy to tell the
+                                                  implementation to supply the TLS details to be used to connect to that
+                                                  backend.
+                                                properties:
+                                                  group:
+                                                    default: ""
+                                                    description: |-
+                                                      Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                                      When unspecified or empty string, core API group is inferred.
+                                                    maxLength: 253
+                                                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                                    type: string
+                                                  kind:
+                                                    default: Service
+                                                    description: |-
+                                                      Kind is the Kubernetes resource kind of the referent. For example
+                                                      "Service".
+
+                                                      Defaults to "Service" when not specified.
+
+                                                      ExternalName services can refer to CNAME DNS records that may live
+                                                      outside of the cluster and as such are difficult to reason about in
+                                                      terms of conformance. They also may not be safe to forward to (see
+                                                      CVE-2021-25740 for more information). Implementations SHOULD NOT
+                                                      support ExternalName Services.
+
+                                                      Support: Core (Services with a type other than ExternalName)
+
+                                                      Support: Implementation-specific (Services with type ExternalName)
+                                                    maxLength: 63
+                                                    minLength: 1
+                                                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                                    type: string
+                                                  name:
+                                                    description:
+                                                      Name is the name of the
+                                                      referent.
+                                                    maxLength: 253
+                                                    minLength: 1
+                                                    type: string
+                                                  namespace:
+                                                    description: |-
+                                                      Namespace is the namespace of the backend. When unspecified, the local
+                                                      namespace is inferred.
+
+                                                      Note that when a namespace different than the local namespace is specified,
+                                                      a ReferenceGrant object is required in the referent namespace to allow that
+                                                      namespace's owner to accept the reference. See the ReferenceGrant
+                                                      documentation for details.
+
+                                                      Support: Core
+                                                    maxLength: 63
+                                                    minLength: 1
+                                                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                                    type: string
+                                                  port:
+                                                    description: |-
+                                                      Port specifies the destination port number to use for this resource.
+                                                      Port is required when the referent is a Kubernetes Service. In this
+                                                      case, the port number is the service port number, not the target port.
+                                                      For other resources, destination port might be derived from the referent
+                                                      resource or this field.
+                                                    format: int32
+                                                    maximum: 65535
+                                                    minimum: 1
+                                                    type: integer
+                                                required:
+                                                  - name
+                                                type: object
+                                                x-kubernetes-validations:
+                                                  - message:
+                                                      Must have port for Service
+                                                      reference
+                                                    rule:
+                                                      "(size(self.group) == 0 &&
+                                                      self.kind == 'Service') ?
+                                                      has(self.port) : true"
+                                              forwardBody:
+                                                description: |-
+                                                  ForwardBody controls if requests to the authorization server should include
+                                                  the body of the client request; and if so, how big that body is allowed
+                                                  to be.
+
+                                                  It is expected that implementations will buffer the request body up to
+                                                  `forwardBody.maxSize` bytes. Bodies over that size must be rejected with a
+                                                  4xx series error (413 or 403 are common examples), and fail processing
+                                                  of the filter.
+
+                                                  If unset, or `forwardBody.maxSize` is set to `0`, then the body will not
+                                                  be forwarded.
+
+                                                  Feature Name: HTTPRouteExternalAuthForwardBody
+                                                properties:
+                                                  maxSize:
+                                                    description: |-
+                                                      MaxSize specifies how large in bytes the largest body that will be buffered
+                                                      and sent to the authorization server. If the body size is larger than
+                                                      `maxSize`, then the body sent to the authorization server must be
+                                                      truncated to `maxSize` bytes.
+
+                                                      Experimental note: This behavior needs to be checked against
+                                                      various dataplanes; it may need to be changed.
+                                                      See https://github.com/kubernetes-sigs/gateway-api/pull/4001#discussion_r2291405746
+                                                      for more.
+
+                                                      If 0, the body will not be sent to the authorization server.
+                                                    type: integer
+                                                type: object
+                                              grpc:
+                                                description: |-
+                                                  GRPCAuthConfig contains configuration for communication with ext_authz
+                                                  protocol-speaking backends.
+
+                                                  If unset, implementations must assume the default behavior for each
+                                                  included field is intended.
+                                                properties:
+                                                  allowedHeaders:
+                                                    description: |-
+                                                      AllowedRequestHeaders specifies what headers from the client request
+                                                      will be sent to the authorization server.
+
+                                                      If this list is empty, then all headers must be sent.
+
+                                                      If the list has entries, only those entries must be sent.
+                                                    items:
+                                                      type: string
+                                                    maxItems: 64
+                                                    type: array
+                                                    x-kubernetes-list-type: set
+                                                type: object
+                                              http:
+                                                description: |-
+                                                  HTTPAuthConfig contains configuration for communication with HTTP-speaking
+                                                  backends.
+
+                                                  If unset, implementations must assume the default behavior for each
+                                                  included field is intended.
+                                                properties:
+                                                  allowedHeaders:
+                                                    description: |-
+                                                      AllowedRequestHeaders specifies what additional headers from the client request
+                                                      will be sent to the authorization server.
+
+                                                      The following headers must always be sent to the authorization server,
+                                                      regardless of this setting:
+
+                                                      * `Host`
+                                                      * `Method`
+                                                      * `Path`
+                                                      * `Content-Length`
+                                                      * `Authorization`
+
+                                                      If this list is empty, then only those headers must be sent.
+
+                                                      Note that `Content-Length` has a special behavior, in that the length
+                                                      sent must be correct for the actual request to the external authorization
+                                                      server - that is, it must reflect the actual number of bytes sent in the
+                                                      body of the request to the authorization server.
+
+                                                      So if the `forwardBody` stanza is unset, or `forwardBody.maxSize` is set
+                                                      to `0`, then `Content-Length` must be `0`. If `forwardBody.maxSize` is set
+                                                      to anything other than `0`, then the `Content-Length` of the authorization
+                                                      request must be set to the actual number of bytes forwarded.
+                                                    items:
+                                                      type: string
+                                                    maxItems: 64
+                                                    type: array
+                                                    x-kubernetes-list-type: set
+                                                  allowedResponseHeaders:
+                                                    description: |-
+                                                      AllowedResponseHeaders specifies what headers from the authorization response
+                                                      will be copied into the request to the backend.
+
+                                                      If this list is empty, then all headers from the authorization server
+                                                      except Authority or Host must be copied.
+                                                    items:
+                                                      type: string
+                                                    maxItems: 64
+                                                    type: array
+                                                    x-kubernetes-list-type: set
+                                                  path:
+                                                    description: |-
+                                                      Path sets the prefix that paths from the client request will have added
+                                                      when forwarded to the authorization server.
+
+                                                      When empty or unspecified, no prefix is added.
+
+                                                      Valid values are the same as the "value" regex for path values in the `match`
+                                                      stanza, and the validation regex will screen out invalid paths in the same way.
+                                                      Even with the validation, implementations MUST sanitize this input before using it
+                                                      directly.
+                                                    maxLength: 1024
+                                                    pattern: ^(?:[-A-Za-z0-9/._~!$&'()*+,;=:@]|[%][0-9a-fA-F]{2})+$
+                                                    type: string
+                                                type: object
+                                              protocol:
+                                                description: |-
+                                                  ExternalAuthProtocol describes which protocol to use when communicating with an
+                                                  ext_authz authorization server.
+
+                                                  When this is set to GRPC, each backend must use the Envoy ext_authz protocol
+                                                  on the port specified in `backendRefs`. Requests and responses are defined
+                                                  in the protobufs explained at:
+                                                  https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
+
+                                                  When this is set to HTTP, each backend must respond with a `200` status
+                                                  code in on a successful authorization. Any other code is considered
+                                                  an authorization failure.
+
+                                                  Feature Names:
+                                                  GRPC Support - HTTPRouteExternalAuthGRPC
+                                                  HTTP Support - HTTPRouteExternalAuthHTTP
+                                                enum:
+                                                  - HTTP
+                                                  - GRPC
+                                                type: string
+                                            required:
+                                              - backendRef
+                                              - protocol
+                                            type: object
+                                            x-kubernetes-validations:
+                                              - message:
+                                                  grpc must be specified when
+                                                  protocol is set to 'GRPC'
+                                                rule:
+                                                  "self.protocol == 'GRPC' ?
+                                                  has(self.grpc) : true"
+                                              - message:
+                                                  protocol must be 'GRPC' when
+                                                  grpc is set
+                                                rule:
+                                                  "has(self.grpc) ?
+                                                  self.protocol == 'GRPC' : true"
+                                              - message:
+                                                  http must be specified when
+                                                  protocol is set to 'HTTP'
+                                                rule:
+                                                  "self.protocol == 'HTTP' ?
+                                                  has(self.http) : true"
+                                              - message:
+                                                  protocol must be 'HTTP' when
+                                                  http is set
+                                                rule:
+                                                  "has(self.http) ?
+                                                  self.protocol == 'HTTP' : true"
                                           requestHeaderModifier:
                                             description: |-
                                               RequestHeaderModifier defines a schema for a filter that modifies request
@@ -8531,10 +9449,14 @@ spec:
                                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                       type: string
                                                     value:
-                                                      description:
-                                                        Value is the value of
-                                                        HTTP Header to be
-                                                        matched.
+                                                      description: |-
+                                                        Value is the value of HTTP Header to be matched.
+                                                        <gateway:experimental:description>
+                                                        Must consist of printable US-ASCII characters, optionally separated
+                                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                        </gateway:experimental:description>
+
+                                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                       maxLength: 4096
                                                       minLength: 1
                                                       type: string
@@ -8609,10 +9531,14 @@ spec:
                                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                       type: string
                                                     value:
-                                                      description:
-                                                        Value is the value of
-                                                        HTTP Header to be
-                                                        matched.
+                                                      description: |-
+                                                        Value is the value of HTTP Header to be matched.
+                                                        <gateway:experimental:description>
+                                                        Must consist of printable US-ASCII characters, optionally separated
+                                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                        </gateway:experimental:description>
+
+                                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                       maxLength: 4096
                                                       minLength: 1
                                                       type: string
@@ -8663,6 +9589,10 @@ spec:
                                                   Support: Extended for Kubernetes Service
 
                                                   Support: Implementation-specific for any other resource
+
+                                                  If the backend service requires TLS, use BackendTLSPolicy to tell the
+                                                  implementation to supply the TLS details to be used to connect to that
+                                                  backend.
                                                 properties:
                                                   group:
                                                     default: ""
@@ -8958,6 +9888,9 @@ spec:
                                                 enum:
                                                   - 301
                                                   - 302
+                                                  - 303
+                                                  - 307
+                                                  - 308
                                                 type: integer
                                             type: object
                                           responseHeaderModifier:
@@ -9006,10 +9939,14 @@ spec:
                                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                       type: string
                                                     value:
-                                                      description:
-                                                        Value is the value of
-                                                        HTTP Header to be
-                                                        matched.
+                                                      description: |-
+                                                        Value is the value of HTTP Header to be matched.
+                                                        <gateway:experimental:description>
+                                                        Must consist of printable US-ASCII characters, optionally separated
+                                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                        </gateway:experimental:description>
+
+                                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                       maxLength: 4096
                                                       minLength: 1
                                                       type: string
@@ -9084,10 +10021,14 @@ spec:
                                                       pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                       type: string
                                                     value:
-                                                      description:
-                                                        Value is the value of
-                                                        HTTP Header to be
-                                                        matched.
+                                                      description: |-
+                                                        Value is the value of HTTP Header to be matched.
+                                                        <gateway:experimental:description>
+                                                        Must consist of printable US-ASCII characters, optionally separated
+                                                        by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                        </gateway:experimental:description>
+
+                                                        <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                       maxLength: 4096
                                                       minLength: 1
                                                       type: string
@@ -9136,7 +10077,7 @@ spec:
                                               Accepted Condition for the Route to `status: False`, with a
                                               Reason of `UnsupportedValue`.
 
-                                              <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef;CORS>
+                                              <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef;CORS;ExternalAuth>
                                             enum:
                                               - RequestHeaderModifier
                                               - ResponseHeaderModifier
@@ -9144,6 +10085,7 @@ spec:
                                               - RequestRedirect
                                               - URLRewrite
                                               - ExtensionRef
+                                              - CORS
                                             type: string
                                           urlRewrite:
                                             description: |-
@@ -9253,6 +10195,18 @@ spec:
                                         type: object
                                         x-kubernetes-validations:
                                           - message:
+                                              filter.cors must be nil if the
+                                              filter.type is not CORS
+                                            rule:
+                                              "!(has(self.cors) && self.type !=
+                                              'CORS')"
+                                          - message:
+                                              filter.cors must be specified for
+                                              CORS filter.type
+                                            rule:
+                                              "!(!has(self.cors) && self.type ==
+                                              'CORS')"
+                                          - message:
                                               filter.requestHeaderModifier must
                                               be nil if the filter.type is not
                                               RequestHeaderModifier
@@ -9341,6 +10295,7 @@ spec:
                                               self.type == 'ExtensionRef')"
                                       maxItems: 16
                                       type: array
+                                      x-kubernetes-list-type: atomic
                                       x-kubernetes-validations:
                                         - message:
                                             May specify either
@@ -9352,14 +10307,10 @@ spec:
                                             'RequestRedirect') && self.exists(f,
                                             f.type == 'URLRewrite'))"
                                         - message:
-                                            May specify either
-                                            httpRouteFilterRequestRedirect or
-                                            httpRouteFilterRequestRewrite, but
-                                            not both
+                                            CORS filter cannot be repeated
                                           rule:
-                                            "!(self.exists(f, f.type ==
-                                            'RequestRedirect') && self.exists(f,
-                                            f.type == 'URLRewrite'))"
+                                            self.filter(f, f.type ==
+                                            'CORS').size() <= 1
                                         - message:
                                             RequestHeaderModifier filter cannot
                                             be repeated
@@ -9476,6 +10427,7 @@ spec:
                                         'Service') ? has(self.port) : true"
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: atomic
                               filters:
                                 description: |-
                                   Filters define the filters that are applied to requests that match
@@ -9523,8 +10475,8 @@ spec:
                                     authentication strategies, rate-limiting, and traffic shaping. API
                                     guarantee/conformance is defined based on the type of the filter.
 
-                                    <gateway:experimental:validation:XValidation:message="filter.cors must be nil if the filter.type is not CORS",rule="!(has(self.cors) && self.type != 'CORS')">
-                                    <gateway:experimental:validation:XValidation:message="filter.cors must be specified for CORS filter.type",rule="!(!has(self.cors) && self.type == 'CORS')">
+                                    <gateway:experimental:validation:XValidation:message="filter.externalAuth must be nil if the filter.type is not ExternalAuth",rule="!(has(self.externalAuth) && self.type != 'ExternalAuth')">
+                                    <gateway:experimental:validation:XValidation:message="filter.externalAuth must be specified for ExternalAuth filter.type",rule="!(!has(self.externalAuth) && self.type == 'ExternalAuth')">
                                   properties:
                                     cors:
                                       description: |-
@@ -9532,38 +10484,34 @@ spec:
                                         cross-origin request based on HTTP response header.
 
                                         Support: Extended
-
-                                        <gateway:experimental>
                                       properties:
                                         allowCredentials:
                                           description: |-
                                             AllowCredentials indicates whether the actual cross-origin request allows
                                             to include credentials.
 
-                                            The only valid value for the `Access-Control-Allow-Credentials` response
-                                            header is true (case-sensitive).
+                                            When set to true, the gateway will include the `Access-Control-Allow-Credentials`
+                                            response header with value true (case-sensitive).
 
-                                            If the credentials are not allowed in cross-origin requests, the gateway
-                                            will omit the header `Access-Control-Allow-Credentials` entirely rather
-                                            than setting its value to false.
+                                            When set to false or omitted the gateway will omit the header
+                                            `Access-Control-Allow-Credentials` entirely (this is the standard CORS
+                                            behavior).
 
                                             Support: Extended
-                                          enum:
-                                            - true
                                           type: boolean
                                         allowHeaders:
                                           description: |-
                                             AllowHeaders indicates which HTTP request headers are supported for
                                             accessing the requested resource.
 
-                                            Header names are not case sensitive.
+                                            Header names are not case-sensitive.
 
                                             Multiple header names in the value of the `Access-Control-Allow-Headers`
                                             response header are separated by a comma (",").
 
-                                            When the `AllowHeaders` field is configured with one or more headers, the
+                                            When the `allowHeaders` field is configured with one or more headers, the
                                             gateway must return the `Access-Control-Allow-Headers` response header
-                                            which value is present in the `AllowHeaders` field.
+                                            which value is present in the `allowHeaders` field.
 
                                             If any header name in the `Access-Control-Request-Headers` request header
                                             is not included in the list of header names specified by the response
@@ -9575,18 +10523,20 @@ spec:
                                             client side.
 
                                             A wildcard indicates that the requests with all HTTP headers are allowed.
-                                            The `Access-Control-Allow-Headers` response header can only use `*`
-                                            wildcard as value when the `AllowCredentials` field is unspecified.
 
-                                            When the `AllowCredentials` field is specified and `AllowHeaders` field
-                                            specified with the `*` wildcard, the gateway must specify one or more
-                                            HTTP headers in the value of the `Access-Control-Allow-Headers` response
-                                            header. The value of the header `Access-Control-Allow-Headers` is same as
-                                            the `Access-Control-Request-Headers` header provided by the client. If
-                                            the header `Access-Control-Request-Headers` is not included in the
-                                            request, the gateway will omit the `Access-Control-Allow-Headers`
-                                            response header, instead of specifying the `*` wildcard. A Gateway
-                                            implementation may choose to add implementation-specific default headers.
+                                            If the configuration contains the wildcard `*` in `allowHeaders` and
+                                            `allowCredentials` is set to `false`, the `Access-Control-Allow-Headers`
+                                            response header may either contain the wildcard `*` or echo the value
+                                            of the `Access-Control-Request-Headers` request header.
+
+                                            If the configuration contains the wildcard `*` in `allowHeaders` and
+                                            `allowCredentials` is set to `true`, the gateway must not return `*`
+                                            in the `Access-Control-Allow-Headers` response header. Instead, it must
+                                            return one or more header names matching the value of the
+                                            `Access-Control-Request-Headers` request header.
+                                            If the `Access-Control-Request-Headers` header is not present in the
+                                            request, the gateway must omit the `Access-Control-Allow-Headers`
+                                            response header.
 
                                             Support: Extended
                                           items:
@@ -9610,6 +10560,13 @@ spec:
                                           maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
+                                          x-kubernetes-validations:
+                                            - message:
+                                                AllowHeaders cannot contain '*'
+                                                alongside other methods
+                                              rule:
+                                                "!('*' in self && self.size() >
+                                                1)"
                                         allowMethods:
                                           description: |-
                                             AllowMethods indicates which HTTP methods are supported for accessing the
@@ -9618,7 +10575,7 @@ spec:
                                             Valid values are any method defined by RFC9110, along with the special
                                             value `*`, which represents all HTTP methods are allowed.
 
-                                            Method names are case sensitive, so these values are also case-sensitive.
+                                            Method names are case-sensitive, so these values are also case-sensitive.
                                             (See https://www.rfc-editor.org/rfc/rfc2616#section-5.1.1)
 
                                             Multiple method names in the value of the `Access-Control-Allow-Methods`
@@ -9627,29 +10584,29 @@ spec:
                                             A CORS-safelisted method is a method that is `GET`, `HEAD`, or `POST`.
                                             (See https://fetch.spec.whatwg.org/#cors-safelisted-method) The
                                             CORS-safelisted methods are always allowed, regardless of whether they
-                                            are specified in the `AllowMethods` field.
+                                            are specified in the `allowMethods` field.
 
-                                            When the `AllowMethods` field is configured with one or more methods, the
+                                            When the `allowMethods` field is configured with one or more methods, the
                                             gateway must return the `Access-Control-Allow-Methods` response header
-                                            which value is present in the `AllowMethods` field.
+                                            which value is present in the `allowMethods` field.
 
                                             If the HTTP method of the `Access-Control-Request-Method` request header
                                             is not included in the list of methods specified by the response header
                                             `Access-Control-Allow-Methods`, it will present an error on the client
                                             side.
 
-                                            The `Access-Control-Allow-Methods` response header can only use `*`
-                                            wildcard as value when the `AllowCredentials` field is unspecified.
+                                            If the configuration contains the wildcard `*` in `allowMethods` and
+                                            `allowCredentials` is set to `false`, the `Access-Control-Allow-Methods`
+                                            response header may either contain the wildcard `*` or echo the value
+                                            of the `Access-Control-Request-Method` request header.
 
-                                            When the `AllowCredentials` field is specified and `AllowMethods` field
-                                            specified with the `*` wildcard, the gateway must specify one HTTP method
-                                            in the value of the Access-Control-Allow-Methods response header. The
-                                            value of the header `Access-Control-Allow-Methods` is same as the
-                                            `Access-Control-Request-Method` header provided by the client. If the
-                                            header `Access-Control-Request-Method` is not included in the request,
-                                            the gateway will omit the `Access-Control-Allow-Methods` response header,
-                                            instead of specifying the `*` wildcard. A Gateway implementation may
-                                            choose to add implementation-specific default methods.
+                                            If the configuration contains the wildcard `*` in `allowMethods` and
+                                            `allowCredentials` is set to `true`, the gateway must not return `*`
+                                            in the `Access-Control-Allow-Methods` response header. Instead, it must
+                                            return a single HTTP method matching the value of the
+                                            `Access-Control-Request-Method` request header.
+                                            If the `Access-Control-Request-Method` header is not present in the request,
+                                            the gateway must omit the `Access-Control-Allow-Methods` response header.
 
                                             Support: Extended
                                           items:
@@ -9702,7 +10659,7 @@ spec:
                                             An origin value that includes _only_ the `*` character indicates requests
                                             from all `Origin`s are allowed.
 
-                                            When the `AllowOrigins` field is configured with multiple origins, it
+                                            When the `allowOrigins` field is configured with multiple origins, it
                                             means the server supports clients from multiple origins. If the request
                                             `Origin` matches the configured allowed origins, the gateway must return
                                             the given `Origin` and sets value of the header
@@ -9719,32 +10676,43 @@ spec:
                                             the CORS headers. The cross-origin request fails on the client side.
                                             Therefore, the client doesn't attempt the actual cross-origin request.
 
-                                            The `Access-Control-Allow-Origin` response header can only use `*`
-                                            wildcard as value when the `AllowCredentials` field is unspecified.
+                                            Conversely, if the request `Origin` matches one of the configured
+                                            allowed origins, the gateway sets the response header
+                                            `Access-Control-Allow-Origin` to the same value as the `Origin`
+                                            header provided by the client.
 
-                                            When the `AllowCredentials` field is specified and `AllowOrigins` field
-                                            specified with the `*` wildcard, the gateway must return a single origin
-                                            in the value of the `Access-Control-Allow-Origin` response header,
-                                            instead of specifying the `*` wildcard. The value of the header
-                                            `Access-Control-Allow-Origin` is same as the `Origin` header provided by
-                                            the client.
+                                            If the configuration contains the wildcard `*` in `allowOrigins` and
+                                            `allowCredentials` is set to `false`, the `Access-Control-Allow-Origin`
+                                            response header may either contain the wildcard `*` or echo the value
+                                            of the `Origin` request header.
+
+                                            If the configuration contains the wildcard `*` in `allowOrigins` and
+                                            `allowCredentials` is set to `true`, the gateway must not return `*`
+                                            in the `Access-Control-Allow-Origin` response header. Instead, it must
+                                            return a single origin matching the value of the `Origin` request header.
 
                                             Support: Extended
                                           items:
                                             description: |-
-                                              The AbsoluteURI MUST NOT be a relative URI, and it MUST follow the URI syntax and
-                                              encoding rules specified in RFC3986.  The AbsoluteURI MUST include both a
-                                              scheme (e.g., "http" or "spiffe") and a scheme-specific-part.  URIs that
-                                              include an authority MUST include a fully qualified domain name or
+                                              The CORSOrigin MUST NOT be a relative URI, and it MUST follow the URI syntax and
+                                              encoding rules specified in RFC3986.  The CORSOrigin MUST include both a
+                                              scheme ("http" or "https") and a scheme-specific-part, or it should be a single '*' character.
+                                              URIs that include an authority MUST include a fully qualified domain name or
                                               IP address as the host.
-                                              <gateway:util:excludeFromCRD> The below regex is taken from the regex section in RFC 3986 with a slight modification to enforce a full URI and not relative. </gateway:util:excludeFromCRD>
                                             maxLength: 253
                                             minLength: 1
-                                            pattern: ^(([^:/?#]+):)(//([^/?#]*))([^?#]*)(\?([^#]*))?(#(.*))?
+                                            pattern: (^\*$)|(^(http(s)?):\/\/(((\*\.)?([a-zA-Z0-9\-]+\.)*[a-zA-Z0-9-]+|\*)(:([0-9]{1,5}))?)$)
                                             type: string
                                           maxItems: 64
                                           type: array
                                           x-kubernetes-list-type: set
+                                          x-kubernetes-validations:
+                                            - message:
+                                                AllowOrigins cannot contain '*'
+                                                alongside other origins
+                                              rule:
+                                                "!('*' in self && self.size() >
+                                                1)"
                                         exposeHeaders:
                                           description: |-
                                             ExposeHeaders indicates which HTTP response headers can be exposed
@@ -9763,19 +10731,25 @@ spec:
                                             (See https://fetch.spec.whatwg.org/#cors-safelisted-response-header-name)
                                             The CORS-safelisted response headers are exposed to client by default.
 
-                                            When an HTTP header name is specified using the `ExposeHeaders` field,
+                                            When an HTTP header name is specified using the `exposeHeaders` field,
                                             this additional header will be exposed as part of the response to the
                                             client.
 
-                                            Header names are not case sensitive.
+                                            Header names are not case-sensitive.
 
                                             Multiple header names in the value of the `Access-Control-Expose-Headers`
                                             response header are separated by a comma (",").
 
                                             A wildcard indicates that the responses with all HTTP headers are exposed
-                                            to clients. The `Access-Control-Expose-Headers` response header can only
-                                            use `*` wildcard as value when the `AllowCredentials` field is
-                                            unspecified.
+                                            to clients.
+
+                                            If the configuration contains the wildcard `*` in `exposeHeaders` and
+                                            `allowCredentials` is set to `false`, the `Access-Control-Expose-Headers`
+                                            response header can contain the wildcard `*`.
+
+                                            If the configuration contains the wildcard `*` in `exposeHeaders` and
+                                            `allowCredentials` is set to `true`, the gateway cannot use the `*`
+                                            in the `Access-Control-Expose-Headers` response header.
 
                                             Support: Extended
                                           items:
@@ -9811,6 +10785,9 @@ spec:
 
                                             The default value of `Access-Control-Max-Age` response header is 5
                                             (seconds).
+
+                                            When the `MaxAge` field is unspecified, the gateway sets the response
+                                            header "Access-Control-Max-Age: 5" by default.
                                           format: int32
                                           minimum: 1
                                           type: integer
@@ -9852,6 +10829,272 @@ spec:
                                         - kind
                                         - name
                                       type: object
+                                    externalAuth:
+                                      description: |-
+                                        ExternalAuth configures settings related to sending request details
+                                        to an external auth service. The external service MUST authenticate
+                                        the request, and MAY authorize the request as well.
+
+                                        If there is any problem communicating with the external service,
+                                        this filter MUST fail closed.
+
+                                        Support: Extended
+
+                                        <gateway:experimental>
+                                      properties:
+                                        backendRef:
+                                          description: |-
+                                            BackendRef is a reference to a backend to send authorization
+                                            requests to.
+
+                                            The backend must speak the selected protocol (GRPC or HTTP) on the
+                                            referenced port.
+
+                                            If the backend service requires TLS, use BackendTLSPolicy to tell the
+                                            implementation to supply the TLS details to be used to connect to that
+                                            backend.
+                                          properties:
+                                            group:
+                                              default: ""
+                                              description: |-
+                                                Group is the group of the referent. For example, "gateway.networking.k8s.io".
+                                                When unspecified or empty string, core API group is inferred.
+                                              maxLength: 253
+                                              pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                                              type: string
+                                            kind:
+                                              default: Service
+                                              description: |-
+                                                Kind is the Kubernetes resource kind of the referent. For example
+                                                "Service".
+
+                                                Defaults to "Service" when not specified.
+
+                                                ExternalName services can refer to CNAME DNS records that may live
+                                                outside of the cluster and as such are difficult to reason about in
+                                                terms of conformance. They also may not be safe to forward to (see
+                                                CVE-2021-25740 for more information). Implementations SHOULD NOT
+                                                support ExternalName Services.
+
+                                                Support: Core (Services with a type other than ExternalName)
+
+                                                Support: Implementation-specific (Services with type ExternalName)
+                                              maxLength: 63
+                                              minLength: 1
+                                              pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
+                                              type: string
+                                            name:
+                                              description:
+                                                Name is the name of the
+                                                referent.
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              description: |-
+                                                Namespace is the namespace of the backend. When unspecified, the local
+                                                namespace is inferred.
+
+                                                Note that when a namespace different than the local namespace is specified,
+                                                a ReferenceGrant object is required in the referent namespace to allow that
+                                                namespace's owner to accept the reference. See the ReferenceGrant
+                                                documentation for details.
+
+                                                Support: Core
+                                              maxLength: 63
+                                              minLength: 1
+                                              pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
+                                              type: string
+                                            port:
+                                              description: |-
+                                                Port specifies the destination port number to use for this resource.
+                                                Port is required when the referent is a Kubernetes Service. In this
+                                                case, the port number is the service port number, not the target port.
+                                                For other resources, destination port might be derived from the referent
+                                                resource or this field.
+                                              format: int32
+                                              maximum: 65535
+                                              minimum: 1
+                                              type: integer
+                                          required:
+                                            - name
+                                          type: object
+                                          x-kubernetes-validations:
+                                            - message:
+                                                Must have port for Service
+                                                reference
+                                              rule:
+                                                "(size(self.group) == 0 &&
+                                                self.kind == 'Service') ?
+                                                has(self.port) : true"
+                                        forwardBody:
+                                          description: |-
+                                            ForwardBody controls if requests to the authorization server should include
+                                            the body of the client request; and if so, how big that body is allowed
+                                            to be.
+
+                                            It is expected that implementations will buffer the request body up to
+                                            `forwardBody.maxSize` bytes. Bodies over that size must be rejected with a
+                                            4xx series error (413 or 403 are common examples), and fail processing
+                                            of the filter.
+
+                                            If unset, or `forwardBody.maxSize` is set to `0`, then the body will not
+                                            be forwarded.
+
+                                            Feature Name: HTTPRouteExternalAuthForwardBody
+                                          properties:
+                                            maxSize:
+                                              description: |-
+                                                MaxSize specifies how large in bytes the largest body that will be buffered
+                                                and sent to the authorization server. If the body size is larger than
+                                                `maxSize`, then the body sent to the authorization server must be
+                                                truncated to `maxSize` bytes.
+
+                                                Experimental note: This behavior needs to be checked against
+                                                various dataplanes; it may need to be changed.
+                                                See https://github.com/kubernetes-sigs/gateway-api/pull/4001#discussion_r2291405746
+                                                for more.
+
+                                                If 0, the body will not be sent to the authorization server.
+                                              type: integer
+                                          type: object
+                                        grpc:
+                                          description: |-
+                                            GRPCAuthConfig contains configuration for communication with ext_authz
+                                            protocol-speaking backends.
+
+                                            If unset, implementations must assume the default behavior for each
+                                            included field is intended.
+                                          properties:
+                                            allowedHeaders:
+                                              description: |-
+                                                AllowedRequestHeaders specifies what headers from the client request
+                                                will be sent to the authorization server.
+
+                                                If this list is empty, then all headers must be sent.
+
+                                                If the list has entries, only those entries must be sent.
+                                              items:
+                                                type: string
+                                              maxItems: 64
+                                              type: array
+                                              x-kubernetes-list-type: set
+                                          type: object
+                                        http:
+                                          description: |-
+                                            HTTPAuthConfig contains configuration for communication with HTTP-speaking
+                                            backends.
+
+                                            If unset, implementations must assume the default behavior for each
+                                            included field is intended.
+                                          properties:
+                                            allowedHeaders:
+                                              description: |-
+                                                AllowedRequestHeaders specifies what additional headers from the client request
+                                                will be sent to the authorization server.
+
+                                                The following headers must always be sent to the authorization server,
+                                                regardless of this setting:
+
+                                                * `Host`
+                                                * `Method`
+                                                * `Path`
+                                                * `Content-Length`
+                                                * `Authorization`
+
+                                                If this list is empty, then only those headers must be sent.
+
+                                                Note that `Content-Length` has a special behavior, in that the length
+                                                sent must be correct for the actual request to the external authorization
+                                                server - that is, it must reflect the actual number of bytes sent in the
+                                                body of the request to the authorization server.
+
+                                                So if the `forwardBody` stanza is unset, or `forwardBody.maxSize` is set
+                                                to `0`, then `Content-Length` must be `0`. If `forwardBody.maxSize` is set
+                                                to anything other than `0`, then the `Content-Length` of the authorization
+                                                request must be set to the actual number of bytes forwarded.
+                                              items:
+                                                type: string
+                                              maxItems: 64
+                                              type: array
+                                              x-kubernetes-list-type: set
+                                            allowedResponseHeaders:
+                                              description: |-
+                                                AllowedResponseHeaders specifies what headers from the authorization response
+                                                will be copied into the request to the backend.
+
+                                                If this list is empty, then all headers from the authorization server
+                                                except Authority or Host must be copied.
+                                              items:
+                                                type: string
+                                              maxItems: 64
+                                              type: array
+                                              x-kubernetes-list-type: set
+                                            path:
+                                              description: |-
+                                                Path sets the prefix that paths from the client request will have added
+                                                when forwarded to the authorization server.
+
+                                                When empty or unspecified, no prefix is added.
+
+                                                Valid values are the same as the "value" regex for path values in the `match`
+                                                stanza, and the validation regex will screen out invalid paths in the same way.
+                                                Even with the validation, implementations MUST sanitize this input before using it
+                                                directly.
+                                              maxLength: 1024
+                                              pattern: ^(?:[-A-Za-z0-9/._~!$&'()*+,;=:@]|[%][0-9a-fA-F]{2})+$
+                                              type: string
+                                          type: object
+                                        protocol:
+                                          description: |-
+                                            ExternalAuthProtocol describes which protocol to use when communicating with an
+                                            ext_authz authorization server.
+
+                                            When this is set to GRPC, each backend must use the Envoy ext_authz protocol
+                                            on the port specified in `backendRefs`. Requests and responses are defined
+                                            in the protobufs explained at:
+                                            https://www.envoyproxy.io/docs/envoy/latest/api-v3/service/auth/v3/external_auth.proto
+
+                                            When this is set to HTTP, each backend must respond with a `200` status
+                                            code in on a successful authorization. Any other code is considered
+                                            an authorization failure.
+
+                                            Feature Names:
+                                            GRPC Support - HTTPRouteExternalAuthGRPC
+                                            HTTP Support - HTTPRouteExternalAuthHTTP
+                                          enum:
+                                            - HTTP
+                                            - GRPC
+                                          type: string
+                                      required:
+                                        - backendRef
+                                        - protocol
+                                      type: object
+                                      x-kubernetes-validations:
+                                        - message:
+                                            grpc must be specified when protocol
+                                            is set to 'GRPC'
+                                          rule:
+                                            "self.protocol == 'GRPC' ?
+                                            has(self.grpc) : true"
+                                        - message:
+                                            protocol must be 'GRPC' when grpc is
+                                            set
+                                          rule:
+                                            "has(self.grpc) ? self.protocol ==
+                                            'GRPC' : true"
+                                        - message:
+                                            http must be specified when protocol
+                                            is set to 'HTTP'
+                                          rule:
+                                            "self.protocol == 'HTTP' ?
+                                            has(self.http) : true"
+                                        - message:
+                                            protocol must be 'HTTP' when http is
+                                            set
+                                          rule:
+                                            "has(self.http) ? self.protocol ==
+                                            'HTTP' : true"
                                     requestHeaderModifier:
                                       description: |-
                                         RequestHeaderModifier defines a schema for a filter that modifies request
@@ -9898,9 +11141,14 @@ spec:
                                                 pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                 type: string
                                               value:
-                                                description:
-                                                  Value is the value of HTTP
-                                                  Header to be matched.
+                                                description: |-
+                                                  Value is the value of HTTP Header to be matched.
+                                                  <gateway:experimental:description>
+                                                  Must consist of printable US-ASCII characters, optionally separated
+                                                  by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                  </gateway:experimental:description>
+
+                                                  <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                 maxLength: 4096
                                                 minLength: 1
                                                 type: string
@@ -9975,9 +11223,14 @@ spec:
                                                 pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                 type: string
                                               value:
-                                                description:
-                                                  Value is the value of HTTP
-                                                  Header to be matched.
+                                                description: |-
+                                                  Value is the value of HTTP Header to be matched.
+                                                  <gateway:experimental:description>
+                                                  Must consist of printable US-ASCII characters, optionally separated
+                                                  by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                  </gateway:experimental:description>
+
+                                                  <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                 maxLength: 4096
                                                 minLength: 1
                                                 type: string
@@ -10028,6 +11281,10 @@ spec:
                                             Support: Extended for Kubernetes Service
 
                                             Support: Implementation-specific for any other resource
+
+                                            If the backend service requires TLS, use BackendTLSPolicy to tell the
+                                            implementation to supply the TLS details to be used to connect to that
+                                            backend.
                                           properties:
                                             group:
                                               default: ""
@@ -10319,6 +11576,9 @@ spec:
                                           enum:
                                             - 301
                                             - 302
+                                            - 303
+                                            - 307
+                                            - 308
                                           type: integer
                                       type: object
                                     responseHeaderModifier:
@@ -10367,9 +11627,14 @@ spec:
                                                 pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                 type: string
                                               value:
-                                                description:
-                                                  Value is the value of HTTP
-                                                  Header to be matched.
+                                                description: |-
+                                                  Value is the value of HTTP Header to be matched.
+                                                  <gateway:experimental:description>
+                                                  Must consist of printable US-ASCII characters, optionally separated
+                                                  by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                  </gateway:experimental:description>
+
+                                                  <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                 maxLength: 4096
                                                 minLength: 1
                                                 type: string
@@ -10444,9 +11709,14 @@ spec:
                                                 pattern: ^[A-Za-z0-9!#$%&'*+\-.^_\x60|~]+$
                                                 type: string
                                               value:
-                                                description:
-                                                  Value is the value of HTTP
-                                                  Header to be matched.
+                                                description: |-
+                                                  Value is the value of HTTP Header to be matched.
+                                                  <gateway:experimental:description>
+                                                  Must consist of printable US-ASCII characters, optionally separated
+                                                  by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                                  </gateway:experimental:description>
+
+                                                  <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                                 maxLength: 4096
                                                 minLength: 1
                                                 type: string
@@ -10495,7 +11765,7 @@ spec:
                                         Accepted Condition for the Route to `status: False`, with a
                                         Reason of `UnsupportedValue`.
 
-                                        <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef;CORS>
+                                        <gateway:experimental:validation:Enum=RequestHeaderModifier;ResponseHeaderModifier;RequestMirror;RequestRedirect;URLRewrite;ExtensionRef;CORS;ExternalAuth>
                                       enum:
                                         - RequestHeaderModifier
                                         - ResponseHeaderModifier
@@ -10503,6 +11773,7 @@ spec:
                                         - RequestRedirect
                                         - URLRewrite
                                         - ExtensionRef
+                                        - CORS
                                       type: string
                                     urlRewrite:
                                       description: |-
@@ -10609,6 +11880,18 @@ spec:
                                   type: object
                                   x-kubernetes-validations:
                                     - message:
+                                        filter.cors must be nil if the
+                                        filter.type is not CORS
+                                      rule:
+                                        "!(has(self.cors) && self.type !=
+                                        'CORS')"
+                                    - message:
+                                        filter.cors must be specified for CORS
+                                        filter.type
+                                      rule:
+                                        "!(!has(self.cors) && self.type ==
+                                        'CORS')"
+                                    - message:
                                         filter.requestHeaderModifier must be nil
                                         if the filter.type is not
                                         RequestHeaderModifier
@@ -10686,6 +11969,7 @@ spec:
                                         == 'ExtensionRef')"
                                 maxItems: 16
                                 type: array
+                                x-kubernetes-list-type: atomic
                                 x-kubernetes-validations:
                                   - message:
                                       May specify either
@@ -10696,6 +11980,10 @@ spec:
                                       "!(self.exists(f, f.type ==
                                       'RequestRedirect') && self.exists(f,
                                       f.type == 'URLRewrite'))"
+                                  - message: CORS filter cannot be repeated
+                                    rule:
+                                      self.filter(f, f.type == 'CORS').size() <=
+                                      1
                                   - message:
                                       RequestHeaderModifier filter cannot be
                                       repeated
@@ -10842,9 +12130,14 @@ spec:
                                               - RegularExpression
                                             type: string
                                           value:
-                                            description:
-                                              Value is the value of HTTP Header
-                                              to be matched.
+                                            description: |-
+                                              Value is the value of HTTP Header to be matched.
+                                              <gateway:experimental:description>
+                                              Must consist of printable US-ASCII characters, optionally separated
+                                              by single tabs or spaces. See: https://tools.ietf.org/html/rfc7230#section-3.2
+                                              </gateway:experimental:description>
+
+                                              <gateway:experimental:validation:Pattern=`^[!-~]+([\t ]?[!-~]+)*$`>
                                             maxLength: 4096
                                             minLength: 1
                                             type: string
@@ -11056,12 +12349,12 @@ spec:
                                   type: object
                                 maxItems: 64
                                 type: array
+                                x-kubernetes-list-type: atomic
                               name:
                                 description: |-
                                   Name is the name of the route rule. This name MUST be unique within a Route if it is set.
 
                                   Support: Extended
-                                  <gateway:experimental>
                                 maxLength: 253
                                 minLength: 1
                                 pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
@@ -11086,6 +12379,7 @@ spec:
                                       a backend request is implementation-specific.
 
                                       Support: Extended
+                                    minimum: 1
                                     type: integer
                                   backoff:
                                     description: |-
@@ -11095,7 +12389,7 @@ spec:
                                       For example, setting the `rules[].retry.backoff` field to the value
                                       `100ms` will cause a backend request to first be retried approximately
                                       100 milliseconds after timing out or receiving a response code configured
-                                      to be retryable.
+                                      to be retriable.
 
                                       An implementation MAY use an exponential or alternative backoff strategy
                                       for subsequent retry attempts, MAY cap the maximum backoff duration to
@@ -11138,7 +12432,7 @@ spec:
                                         HTTPRouteRetryStatusCode defines an HTTP response status code for
                                         which a backend request should be retried.
 
-                                        Implementations MUST support the following status codes as retryable:
+                                        Implementations MUST support the following status codes as retriable:
 
                                         * 500
                                         * 502
@@ -11156,6 +12450,7 @@ spec:
                                       minimum: 400
                                       type: integer
                                     type: array
+                                    x-kubernetes-list-type: set
                                 type: object
                               sessionPersistence:
                                 description: |-
@@ -11209,15 +12504,6 @@ spec:
                                           - Session
                                         type: string
                                     type: object
-                                  idleTimeout:
-                                    description: |-
-                                      IdleTimeout defines the idle timeout of the persistent session.
-                                      Once the session has been idle for more than the specified
-                                      IdleTimeout duration, the session becomes invalid.
-
-                                      Support: Extended
-                                    pattern: ^([0-9]{1,5}(h|m|s|ms)){1,4}$
-                                    type: string
                                   sessionName:
                                     description: |-
                                       SessionName defines the name of the persistent session token
@@ -11232,7 +12518,7 @@ spec:
                                     default: Cookie
                                     description: |-
                                       Type defines the type of session persistence such as through
-                                      the use a header or cookie. Defaults to cookie based session
+                                      the use of a header or cookie. Defaults to cookie based session
                                       persistence.
 
                                       Support: Core for "Cookie" type
@@ -11252,6 +12538,12 @@ spec:
                                       !has(self.cookieConfig.lifetimeType) ||
                                       self.cookieConfig.lifetimeType !=
                                       'Permanent' || has(self.absoluteTimeout)"
+                                  - message:
+                                      cookieConfig can only be set with type
+                                      Cookie
+                                    rule:
+                                      "!has(self.cookieConfig) || self.type ==
+                                      'Cookie'"
                               timeouts:
                                 description: |-
                                   Timeouts defines the timeouts that can be configured for an HTTP request.
@@ -11391,7 +12683,9 @@ spec:
                                   self.matches[0].path.type != 'PathPrefix') ?
                                   false : true) : true"
                           maxItems: 16
+                          minItems: 1
                           type: array
+                          x-kubernetes-list-type: atomic
                           x-kubernetes-validations:
                             - message:
                                 While 16 rules and 64 matches per rule are
@@ -11415,6 +12709,26 @@ spec:
                                 ? self[13].matches.size() : 0) + (self.size() >
                                 14 ? self[14].matches.size() : 0) + (self.size()
                                 > 15 ? self[15].matches.size() : 0) <= 128"
+                        useDefaultGateways:
+                          description: |-
+                            UseDefaultGateways indicates the default Gateway scope to use for this
+                            Route. If unset (the default) or set to None, the Route will not be
+                            attached to any default Gateway; if set, it will be attached to any
+                            default Gateway supporting the named scope, subject to the usual rules
+                            about which Routes a Gateway is allowed to claim.
+
+                            Think carefully before using this functionality! The set of default
+                            Gateways supporting the requested scope can change over time without
+                            any notice to the Route author, and in many situations it will not be
+                            appropriate to request a default Gateway for a given Route -- for
+                            example, a Route with specific security requirements should almost
+                            certainly not use a default Gateway.
+
+                            <gateway:experimental>
+                          enum:
+                            - All
+                            - None
+                          type: string
                       type: object
                   type: object
                 ingress:
@@ -12660,7 +13974,7 @@ spec:
                   description: |-
                     Version sets the tag of the default image: docker.io/grafana/grafana.
                     Allows full image refs with/without sha256checksum: "registry/repo/image:tag@sha"
-                    default: 12.3.0
+                    default: 13.1.3
                   type: string
               type: object
             status:
@@ -12754,6 +14068,10 @@ spec:
                   items:
                     type: string
                   type: array
+                manifests:
+                  items:
+                    type: string
+                  type: array
                 muteTimings:
                   items:
                     type: string
@@ -12762,6 +14080,11 @@ spec:
                   items:
                     type: string
                   type: array
+                replicas:
+                  format: int32
+                  type: integer
+                selector:
+                  type: string
                 serviceaccounts:
                   items:
                     type: string
@@ -12779,18 +14102,23 @@ spec:
       served: true
       storage: true
       subresources:
+        scale:
+          labelSelectorPath: .status.selector
+          specReplicasPath: .spec.deployment.spec.replicas
+          statusReplicasPath: .status.replicas
         status: {}
 ---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
   annotations:
-    controller-gen.kubebuilder.io/version: v0.19.0
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: grafanaserviceaccounts.grafana.integreatly.org
 spec:
   group: grafana.integreatly.org
   names:
     categories:
+      - all
       - grafana-operator
     kind: GrafanaServiceAccount
     listKind: GrafanaServiceAccountList
@@ -12909,9 +14237,13 @@ spec:
                   x-kubernetes-list-type: map
               required:
                 - instanceName
-                - name
                 - role
               type: object
+              x-kubernetes-validations:
+                - message: spec.name is immutable
+                  rule:
+                    ((!has(oldSelf.name) && !has(self.name)) ||
+                    (has(oldSelf.name) && has(self.name)))
             status:
               description:
                 GrafanaServiceAccountStatus defines the observed state of a
@@ -12980,7 +14312,7 @@ spec:
                   type: object
                 conditions:
                   description:
-                    Results when synchonizing resource with Grafana instances
+                    Results when synchronizing resource with Grafana instances
                   items:
                     description:
                       Condition contains details for one aspect of the current

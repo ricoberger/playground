@@ -9,7 +9,7 @@ spec:
   chart:
     spec:
       chart: grafana-operator
-      version: 5.21.1
+      version: 5.25.0
       sourceRef:
         kind: HelmRepository
         name: grafana
@@ -30,10 +30,6 @@ spec:
     podLabels:
       app: grafana-operator
 
-    podAnnotations:
-      prometheus.io/scrape: "true"
-      prometheus.io/port: "9090"
-
     securityContext:
       capabilities:
         drop:
@@ -50,3 +46,18 @@ spec:
         memory: 64Mi
       limits:
         memory: 64Mi
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMPodScrape
+metadata:
+  name: grafana-operator
+  namespace: observability
+spec:
+  jobLabel: app.kubernetes.io/name
+  selector:
+    matchLabels:
+      app.kubernetes.io/instance: grafana-operator
+      app.kubernetes.io/name: grafana-operator
+  podMetricsEndpoints:
+    - port: metrics

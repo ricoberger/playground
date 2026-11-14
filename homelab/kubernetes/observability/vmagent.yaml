@@ -1,0 +1,109 @@
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: vmagent
+  namespace: observability
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: vmagent
+rules:
+  - apiGroups: ["", "networking.k8s.io", "extensions", "discovery.k8s.io"]
+    resources:
+      - nodes
+      - nodes/metrics
+      - services
+      - endpoints
+      - endpointslices
+      - pods
+      - ingresses
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources:
+      - namespaces
+      - configmaps
+    verbs: ["get"]
+  - nonResourceURLs: ["/metrics", "/metrics/resources", "/metrics/slis"]
+    verbs: ["get"]
+  - apiGroups:
+      - route.openshift.io
+      - image.openshift.io
+    resources:
+      - routers/metrics
+      - registry/metrics
+    verbs:
+      - get
+  - apiGroups:
+      - ""
+    resources:
+      - secrets
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: vmagent
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: vmagent
+subjects:
+  - kind: ServiceAccount
+    name: vmagent
+    namespace: observability
+
+---
+apiVersion: operator.victoriametrics.com/v1beta1
+kind: VMAgent
+metadata:
+  name: vmagent
+  namespace: observability
+spec:
+  extraArgs:
+    promscrape.kubernetesSDCheckInterval: 5s
+    promscrape.kubernetes.useHTTP2Client: "true"
+    promscrape.maxScrapeSize: "83886080"
+    promscrape.suppressScrapeErrors: "true"
+  logFormat: json
+  logLevel: INFO
+  podDisruptionBudget:
+    maxUnavailable: 1
+  podMetadata:
+    labels:
+      app: vmagent
+  remoteWrite:
+    - url: http://vminsert-vmcluster.observability.svc.cluster.local:8480/insert/0/prometheus
+  replicaCount: 1
+  securityContext:
+    fsGroup: 65534
+    runAsNonRoot: true
+    runAsUser: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  selectAllByDefault: true
+  serviceAccountName: vmagent
+  shardCount: 1
+  statefulMode: true
+  statefulStorage:
+    volumeClaimTemplate:
+      metadata:
+        labels:
+          app: vmagent
+      spec:
+        resources:
+          requests:
+            storage: 1Gi
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: DoNotSchedule
+      labelSelector:
+        matchLabels:
+          app: vmagent

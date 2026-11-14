@@ -4,13 +4,12 @@ resources:
   - base.yaml
   - bookinfo.yaml
   - cert-manager.yaml
-  # - clickhouse-operator.yaml
   - echoserver.yaml
   - external-dns.yaml
   - flux-system.yaml
   - istio-egress.yaml
   - istio-ingress.yaml
   - istio-system.yaml
+  - kube-system.yaml
   - observability.yaml
-  # - otel-demo.yaml
-  - victoriastack.yaml
+  - otel-demo.yaml

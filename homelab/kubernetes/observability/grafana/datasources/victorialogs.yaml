@@ -17,7 +17,7 @@ spec:
     isDefault: false
     orgId: 1
     editable: false
-    url: http://vlselect-vlcluster.victoriastack.svc.cluster.local:9471
+    url: http://vlselect-vlcluster.observability.svc.cluster.local:9471
     jsonData:
       derivedFields:
         - datasourceUid: victoriatraces
@@ -26,3 +26,241 @@ spec:
           name: Trace
           url: "${__value.raw}"
           urlDisplayLabel: View Trace
+      logLevelRules:
+        # critical
+        - field: "severity_text"
+          value: "critical"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Critical"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "CRITICAL"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "fatal"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Fatal"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "FATAL"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "F"
+          level: "critical"
+          operator: "equals"
+          enabled: true
+
+        # error
+        - field: "severity_text"
+          value: "error"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Error"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "ERROR"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "err"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Err"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "ERR"
+          level: "error"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "E"
+          level: "error"
+          operator: "equals"
+          enabled: true
+
+        # warning
+        - field: "severity_text"
+          value: "warning"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Warning"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "WARNING"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "warn"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Warn"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "WARN"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "W"
+          level: "warning"
+          operator: "equals"
+          enabled: true
+
+        # info
+        - field: "severity_text"
+          value: "info"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Info"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "INFO"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "information"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Information"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "INFORMATION"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "informational"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Informational"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "INFORMATIONAL"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "notice"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Notice"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "NOTICE"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "I"
+          level: "info"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Normal"
+          level: "info"
+          operator: "equals"
+          enabled: true
+
+        # debug
+        - field: "severity_text"
+          value: "debug"
+          level: "debug"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Debug"
+          level: "debug"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "DEBUG"
+          level: "debug"
+          operator: "equals"
+          enabled: true
+
+        # trace
+        - field: "severity_text"
+          value: "trace"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Trace"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "TRACE"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "verbose"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "Verbose"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        - field: "severity_text"
+          value: "VERBOSE"
+          level: "trace"
+          operator: "equals"
+          enabled: true
+        # unknown
+        - field: "severity_text"
+          value: ".*"
+          level: "unknown"
+          operator: "regex"
+          enabled: true
